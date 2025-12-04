@@ -64,6 +64,29 @@ For development, use the included deploy script:
 
 Configure your Home Assistant host in the script first.
 
+## 💻 Development Setup
+
+For developers who want to contribute or customize the integration:
+
+### Quick Setup (macOS)
+
+```bash
+# Run automated setup script
+./setup_dev_environment.sh
+
+# Open in VS Code and reopen in DevContainer
+code .
+# Press Cmd+Shift+P → "Remote-Containers: Reopen in Container"
+```
+
+The setup script installs:
+- Homebrew (if not installed)
+- Docker Desktop
+- VS Code and required extensions
+- DevContainer environment
+
+See [.devcontainer/README.md](.devcontainer/README.md) for detailed development instructions.
+
 ## ⚙️ Setup
 
 1. Go to **Settings** → **Devices & Services**
