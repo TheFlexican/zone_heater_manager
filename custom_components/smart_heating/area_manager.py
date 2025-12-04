@@ -291,11 +291,26 @@ class Area:
         if not self.enabled:
             return STATE_OFF
         
+        # Check if any thermostat is actively heating
+        # This will be updated by the climate controller
+        if hasattr(self, '_state'):
+            return self._state
+        
+        # Fallback to temperature-based state
         if self._current_temperature is not None and self.target_temperature is not None:
             if self._current_temperature < self.target_temperature - 0.5:
                 return STATE_HEATING
         
         return STATE_IDLE
+    
+    @state.setter
+    def state(self, value: str) -> None:
+        """Set the current state of the area.
+        
+        Args:
+            value: New state value
+        """
+        self._state = value
 
     def to_dict(self) -> dict[str, Any]:
         """Convert area to dictionary for storage.

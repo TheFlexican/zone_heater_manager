@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - 📱 Mobile app notifications
 - 🏡 Multi-home support
 
+## [Unreleased]
+
+### 🐛 Fixed
+- **Device Display Names**: Area cards now show human-readable device names (e.g., "Living Room Thermostat") instead of entity IDs (e.g., "climate.living_room")
+  - API endpoints `/api/smart_heating/areas` and `/api/smart_heating/areas/{id}` now include `name` field in device objects
+  - Device names are extracted from Home Assistant entity state's `friendly_name` attribute
+  - Improves UX when assigning devices to areas via drag-and-drop
+
 ## [2.1.0] - 2025-12-04
 
 ### ✨ Added - Major Feature Release

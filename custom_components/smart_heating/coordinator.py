@@ -55,8 +55,31 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
                 "areas": {},
             }
             
-            # Add area information
+            # Add area information with device states
             for area_id, area in areas.items():
+                # Get device states
+                devices_data = []
+                for device_id, device_info in area.devices.items():
+                    state = self.hass.states.get(device_id)
+                    device_data = {
+                        "id": device_id,
+                        "type": device_info["type"],
+                        "state": state.state if state else "unavailable",
+                    }
+                    
+                    # Add device-specific attributes
+                    if state and state.attributes:
+                        if device_info["type"] == "thermostat":
+                            device_data["current_temperature"] = state.attributes.get("current_temperature")
+                            device_data["target_temperature"] = state.attributes.get("temperature")
+                            device_data["hvac_action"] = state.attributes.get("hvac_action")
+                        elif device_info["type"] == "temperature_sensor":
+                            device_data["temperature"] = state.attributes.get("temperature", state.state)
+                        elif device_info["type"] == "valve":
+                            device_data["position"] = state.attributes.get("position")
+                    
+                    devices_data.append(device_data)
+                
                 data["areas"][area_id] = {
                     "name": area.name,
                     "enabled": area.enabled,
@@ -64,6 +87,7 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
                     "target_temperature": area.target_temperature,
                     "current_temperature": area.current_temperature,
                     "device_count": len(area.devices),
+                    "devices": devices_data,
                 }
             
             _LOGGER.debug("Smart Heating data updated successfully: %d areas", len(areas))

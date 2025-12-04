@@ -89,6 +89,7 @@ class ClimateController:
             if not area.enabled:
                 # Area disabled - turn off heating
                 await self._async_set_area_heating(area, False)
+                area.state = "off"  # Update area state
                 continue
             
             # Get effective target (considering schedules and night boost)
@@ -111,12 +112,14 @@ class ClimateController:
             
             if should_heat:
                 await self._async_set_area_heating(area, True, target_temp)
+                area.state = "heating"  # Update area state
                 _LOGGER.info(
                     "Area %s: Heating ON (current: %.1f°C, target: %.1f°C)",
                     area_id, current_temp, target_temp
                 )
             elif should_stop:
                 await self._async_set_area_heating(area, False)
+                area.state = "idle"  # Update area state
                 _LOGGER.debug(
                     "Area %s: Heating OFF (current: %.1f°C, target: %.1f°C)",
                     area_id, current_temp, target_temp

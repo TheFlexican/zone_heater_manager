@@ -63,3 +63,8 @@ custom_components/area_heater_manager/frontend/*.local
 .devcontainer/.google.token
 .devcontainer/deps/
 .devcontainer
+
+ha-config/**/*
+mosquitto-data/
+mosquitto-log/
+mosquitto-config/

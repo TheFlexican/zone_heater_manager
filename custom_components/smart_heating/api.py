@@ -424,6 +424,22 @@ class SmartHeatingAPIView(HomeAssistantView):
             self.area_manager.set_area_target_temperature(area_id, temperature)
             await self.area_manager.async_save()
             
+            # Trigger immediate climate control to update devices
+            climate_controller = self.hass.data.get(DOMAIN, {}).get("climate_controller")
+            if climate_controller:
+                await climate_controller.async_control_heating()
+                _LOGGER.info("Triggered immediate climate control after temperature change")
+            
+            # Refresh coordinator to notify websocket listeners
+            entry_ids = [
+                key for key in self.hass.data[DOMAIN].keys()
+                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub"]
+            ]
+            if entry_ids:
+                coordinator = self.hass.data[DOMAIN][entry_ids[0]]
+                await coordinator.async_request_refresh()
+                _LOGGER.debug("Coordinator refreshed to update frontend")
+            
             return web.json_response({"success": True})
         except ValueError as err:
             return web.json_response(
@@ -444,6 +460,20 @@ class SmartHeatingAPIView(HomeAssistantView):
             self.area_manager.enable_area(area_id)
             await self.area_manager.async_save()
             
+            # Trigger immediate climate control
+            climate_controller = self.hass.data.get(DOMAIN, {}).get("climate_controller")
+            if climate_controller:
+                await climate_controller.async_control_heating()
+            
+            # Refresh coordinator
+            entry_ids = [
+                key for key in self.hass.data[DOMAIN].keys()
+                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub"]
+            ]
+            if entry_ids:
+                coordinator = self.hass.data[DOMAIN][entry_ids[0]]
+                await coordinator.async_request_refresh()
+            
             return web.json_response({"success": True})
         except ValueError as err:
             return web.json_response(
@@ -463,6 +493,20 @@ class SmartHeatingAPIView(HomeAssistantView):
         try:
             self.area_manager.disable_area(area_id)
             await self.area_manager.async_save()
+            
+            # Trigger immediate climate control to turn off devices
+            climate_controller = self.hass.data.get(DOMAIN, {}).get("climate_controller")
+            if climate_controller:
+                await climate_controller.async_control_heating()
+            
+            # Refresh coordinator
+            entry_ids = [
+                key for key in self.hass.data[DOMAIN].keys()
+                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub"]
+            ]
+            if entry_ids:
+                coordinator = self.hass.data[DOMAIN][entry_ids[0]]
+                await coordinator.async_request_refresh()
             
             return web.json_response({"success": True})
         except ValueError as err:

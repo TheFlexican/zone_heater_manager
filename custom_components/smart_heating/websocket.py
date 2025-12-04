@@ -101,6 +101,33 @@ def websocket_get_areas(
     areas_data = []
     
     for area_id, area in areas.items():
+        # Get device states
+        devices_data = []
+        for dev_id, dev_data in area.devices.items():
+            state = hass.states.get(dev_id)
+            device_info = {
+                "id": dev_id,
+                "type": dev_data["type"],
+                "mqtt_topic": dev_data.get("mqtt_topic"),
+                "state": state.state if state else "unavailable",
+            }
+            
+            # Add device-specific attributes
+            if state and state.attributes:
+                if dev_data["type"] == "thermostat":
+                    device_info["current_temperature"] = state.attributes.get("current_temperature")
+                    device_info["target_temperature"] = state.attributes.get("temperature")
+                    device_info["hvac_action"] = state.attributes.get("hvac_action")
+                    device_info["friendly_name"] = state.attributes.get("friendly_name", dev_id)
+                elif dev_data["type"] == "temperature_sensor":
+                    device_info["temperature"] = state.attributes.get("temperature", state.state)
+                    device_info["friendly_name"] = state.attributes.get("friendly_name", dev_id)
+                elif dev_data["type"] == "valve":
+                    device_info["position"] = state.attributes.get("position")
+                    device_info["friendly_name"] = state.attributes.get("friendly_name", dev_id)
+            
+            devices_data.append(device_info)
+        
         areas_data.append({
             "id": area.area_id,
             "name": area.name,
@@ -108,14 +135,7 @@ def websocket_get_areas(
             "state": area.state,
             "target_temperature": area.target_temperature,
             "current_temperature": area.current_temperature,
-            "devices": [
-                {
-                    "id": dev_id,
-                    "type": dev_data["type"],
-                    "mqtt_topic": dev_data.get("mqtt_topic"),
-                }
-                for dev_id, dev_data in area.devices.items()
-            ],
+            "devices": devices_data,
         })
     
     connection.send_result(msg["id"], {"areas": areas_data})
