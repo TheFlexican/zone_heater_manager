@@ -390,21 +390,28 @@ data:
 ```
 
 #### `smart_heating.set_trv_temperatures`
-Configure global temperature limits for TRVs without position control.
+Configure global settings for temperature-controlled TRVs. **System dynamically detects device capabilities** - no need to configure per-device.
 
 **Parameters:**
-- `heating_temp` (optional): Temperature to set when heating (default: 25.0°C)
-- `idle_temp` (optional): Temperature to set when idle (default: 10.0°C)
+- `heating_temp` (optional): Fallback temperature for heating (default: 25.0°C)
+- `idle_temp` (optional): Temperature when idle/closed (default: 10.0°C)
+- `temp_offset` (optional): Offset above target temp to ensure valve opens (default: 10.0°C)
 
 **Example:**
 ```yaml
 service: smart_heating.set_trv_temperatures
 data:
-  heating_temp: 25.0  # Set TRV high when area needs heat
-  idle_temp: 10.0     # Set TRV low when area is idle
+  heating_temp: 25.0   # Fallback if target+offset is lower
+  idle_temp: 10.0      # Closes valve when area idle
+  temp_offset: 10.0    # Add 10°C to target (21°C target → 31°C TRV)
 ```
 
-**Note**: This is for TRVs that only support temperature control (climate.* entities) and require an external temperature sensor. TRVs with direct position control (number.* entities) don't need this configuration.
+**How it works**:
+- For area target 21°C: TRV set to `max(21+10, 25)` = 31°C when heating
+- When idle: TRV set to 10°C (closes valve)
+- System queries each valve's capabilities automatically
+
+**Note**: Only applies to TRVs without position control (e.g., TS0601 _TZE200_b6wax7g0). Position-controlled valves (number.* entities) use direct 0-100% control.
 
 ## 📖 Usage
 
@@ -432,11 +439,12 @@ automation:
           gateway_id: "climate.opentherm_gateway"
           enabled: true
       
-      # Configure TRV temperature limits (for TRVs without position control)
+      # Configure TRV settings (automatically applies to temp-controlled valves)
       - service: smart_heating.set_trv_temperatures
         data:
-          heating_temp: 25.0
-          idle_temp: 10.0
+          heating_temp: 25.0   # Fallback temperature
+          idle_temp: 10.0      # Close valve when idle
+          temp_offset: 10.0    # Add to target for heating (dynamic)
       
       # Setup Living Room area
       - service: smart_heating.add_device_to_area

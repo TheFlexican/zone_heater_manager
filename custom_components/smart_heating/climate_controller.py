@@ -418,9 +418,10 @@ class ClimateController:
                     # TRV with temperature control only
                     # Use high/low temperature method
                     if heating and target_temp is not None:
-                        # Set to heating temperature (default 25°C or configured)
+                        # Set to heating temperature using configured offset
                         # Use actual target + offset to ensure valve opens
-                        heating_temp = max(target_temp + 10, self.area_manager.trv_heating_temp)
+                        offset = self.area_manager.trv_temp_offset
+                        heating_temp = max(target_temp + offset, self.area_manager.trv_heating_temp)
                         await self.hass.services.async_call(
                             CLIMATE_DOMAIN,
                             SERVICE_SET_TEMPERATURE,
@@ -431,8 +432,8 @@ class ClimateController:
                             blocking=False,
                         )
                         _LOGGER.debug(
-                            "Set TRV %s to heating temp %.1f°C (target %.1f°C + 10°C)", 
-                            valve_id, heating_temp, target_temp
+                            "Set TRV %s to heating temp %.1f°C (target %.1f°C + %.1f°C offset)", 
+                            valve_id, heating_temp, target_temp, offset
                         )
                     else:
                         # Set to idle temperature (default 10°C or configured)

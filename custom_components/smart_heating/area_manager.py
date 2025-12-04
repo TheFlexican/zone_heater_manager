@@ -13,6 +13,14 @@ from .const import (
     ATTR_TARGET_TEMPERATURE,
     ATTR_AREA_ID,
     ATTR_AREA_NAME,
+    ATTR_OPENTHERM_GATEWAY,
+    ATTR_OPENTHERM_ENABLED,
+    ATTR_TRV_HEATING_TEMP,
+    ATTR_TRV_IDLE_TEMP,
+    ATTR_TRV_TEMP_OFFSET,
+    ATTR_HYSTERESIS,
+    ATTR_NIGHT_BOOST_ENABLED,
+    ATTR_NIGHT_BOOST_OFFSET,
     DEVICE_TYPE_OPENTHERM_GATEWAY,
     DEVICE_TYPE_TEMPERATURE_SENSOR,
     DEVICE_TYPE_THERMOSTAT,
@@ -25,6 +33,7 @@ from .const import (
     STORAGE_VERSION,
     DEFAULT_TRV_HEATING_TEMP,
     DEFAULT_TRV_IDLE_TEMP,
+    DEFAULT_TRV_TEMP_OFFSET,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -435,6 +444,7 @@ class AreaManager:
         # Global TRV configuration
         self.trv_heating_temp: float = DEFAULT_TRV_HEATING_TEMP
         self.trv_idle_temp: float = DEFAULT_TRV_IDLE_TEMP
+        self.trv_temp_offset: float = DEFAULT_TRV_TEMP_OFFSET
         
         _LOGGER.debug("AreaManager initialized")
 
@@ -449,6 +459,7 @@ class AreaManager:
             self.opentherm_enabled = data.get("opentherm_enabled", False)
             self.trv_heating_temp = data.get("trv_heating_temp", DEFAULT_TRV_HEATING_TEMP)
             self.trv_idle_temp = data.get("trv_idle_temp", DEFAULT_TRV_IDLE_TEMP)
+            self.trv_temp_offset = data.get("trv_temp_offset", DEFAULT_TRV_TEMP_OFFSET)
             
             # Load areas
             if "areas" in data:
@@ -467,6 +478,7 @@ class AreaManager:
             "opentherm_enabled": self.opentherm_enabled,
             "trv_heating_temp": self.trv_heating_temp,
             "trv_idle_temp": self.trv_idle_temp,
+            "trv_temp_offset": self.trv_temp_offset,
             "areas": [area.to_dict() for area in self.areas.values()]
         }
         await self._store.async_save(data)
@@ -657,13 +669,21 @@ class AreaManager:
         self.opentherm_enabled = enabled and gateway_id is not None
         _LOGGER.info("OpenTherm gateway set to %s (enabled: %s)", gateway_id, self.opentherm_enabled)
 
-    def set_trv_temperatures(self, heating_temp: float, idle_temp: float) -> None:
+    def set_trv_temperatures(self, heating_temp: float, idle_temp: float, temp_offset: float | None = None) -> None:
         """Set global TRV temperature limits for areas without position control.
         
         Args:
             heating_temp: Temperature to set when heating (default 25°C)
             idle_temp: Temperature to set when idle (default 10°C)
+            temp_offset: Temperature offset above target for temp-controlled valves (default 10°C)
         """
         self.trv_heating_temp = heating_temp
         self.trv_idle_temp = idle_temp
-        _LOGGER.info("TRV temperatures set: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)
+        if temp_offset is not None:
+            self.trv_temp_offset = temp_offset
+            _LOGGER.info(
+                "TRV temperatures set: heating=%.1f°C, idle=%.1f°C, offset=%.1f°C",
+                heating_temp, idle_temp, temp_offset
+            )
+        else:
+            _LOGGER.info("TRV temperatures set: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)

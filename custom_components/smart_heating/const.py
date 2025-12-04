@@ -71,8 +71,10 @@ ATTR_OPENTHERM_ENABLED: Final = "opentherm_enabled"
 # TRV Configuration
 ATTR_TRV_HEATING_TEMP: Final = "trv_heating_temp"
 ATTR_TRV_IDLE_TEMP: Final = "trv_idle_temp"
+ATTR_TRV_TEMP_OFFSET: Final = "trv_temp_offset"
 DEFAULT_TRV_HEATING_TEMP: Final = 25.0
 DEFAULT_TRV_IDLE_TEMP: Final = 10.0
+DEFAULT_TRV_TEMP_OFFSET: Final = 10.0  # Offset above target temp for temp-controlled valves
 ATTR_SCHEDULE_ID: Final = "schedule_id"
 ATTR_TIME: Final = "time"
 ATTR_DAYS: Final = "days"

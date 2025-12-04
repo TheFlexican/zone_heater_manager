@@ -23,6 +23,11 @@ from .const import (
     ATTR_NIGHT_BOOST_ENABLED,
     ATTR_NIGHT_BOOST_OFFSET,
     ATTR_HYSTERESIS,
+    ATTR_OPENTHERM_GATEWAY,
+    ATTR_OPENTHERM_ENABLED,
+    ATTR_TRV_HEATING_TEMP,
+    ATTR_TRV_IDLE_TEMP,
+    ATTR_TRV_TEMP_OFFSET,
     DEVICE_TYPE_OPENTHERM_GATEWAY,
     DEVICE_TYPE_TEMPERATURE_SENSOR,
     DEVICE_TYPE_THERMOSTAT,
@@ -387,13 +392,26 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         """Handle the set_trv_temperatures service call."""
         heating_temp = call.data.get("heating_temp", 25.0)
         idle_temp = call.data.get("idle_temp", 10.0)
+        temp_offset = call.data.get("temp_offset")
         
-        _LOGGER.debug("Setting TRV temperatures: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)
+        if temp_offset is not None:
+            _LOGGER.debug(
+                "Setting TRV temperatures: heating=%.1f°C, idle=%.1f°C, offset=%.1f°C",
+                heating_temp, idle_temp, temp_offset
+            )
+        else:
+            _LOGGER.debug("Setting TRV temperatures: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)
         
         try:
-            area_manager.set_trv_temperatures(heating_temp, idle_temp)
+            area_manager.set_trv_temperatures(heating_temp, idle_temp, temp_offset)
             await area_manager.async_save()
-            _LOGGER.info("Set TRV temperatures: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)
+            if temp_offset is not None:
+                _LOGGER.info(
+                    "Set TRV temperatures: heating=%.1f°C, idle=%.1f°C, offset=%.1f°C",
+                    heating_temp, idle_temp, temp_offset
+                )
+            else:
+                _LOGGER.info("Set TRV temperatures: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)
         except ValueError as err:
             _LOGGER.error("Failed to set TRV temperatures: %s", err)
     
@@ -460,6 +478,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
     TRV_TEMPERATURES_SCHEMA = vol.Schema({
         vol.Optional("heating_temp", default=25.0): vol.Coerce(float),
         vol.Optional("idle_temp", default=10.0): vol.Coerce(float),
+        vol.Optional("temp_offset"): vol.Coerce(float),
     })
     
     # Register all services
