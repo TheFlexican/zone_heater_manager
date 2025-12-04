@@ -135,6 +135,25 @@ For development, use the included deploy script:
 
 Configure your Home Assistant host in the script first.
 
+### Method 4: Development with Docker (Recommended)
+
+For local development and testing:
+
+```bash
+# Initial setup - creates Docker containers with HA + MQTT
+./setup.sh
+
+# After making code changes - syncs backend + frontend
+./sync.sh
+```
+
+The `sync.sh` script:
+- Builds the React frontend
+- Copies Python backend files to the container
+- Syncs frontend dist to the container
+- Restarts Home Assistant automatically
+- Takes ~30 seconds total
+
 ## 💻 Development Setup
 
 For developers who want to contribute or customize the integration:
