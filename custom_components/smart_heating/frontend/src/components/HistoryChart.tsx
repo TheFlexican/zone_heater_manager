@@ -92,8 +92,36 @@ const HistoryChart = ({ areaId }: HistoryChartProps) => {
     current: entry.current_temperature,
     target: entry.target_temperature,
     // For heating indicator scatter plot
-    heatingDot: entry.state === 'heating' ? entry.current_temperature : null
+    heatingDot: entry.state === 'heating' ? entry.current_temperature : null,
+    // Store state for custom tooltip
+    heatingState: entry.state
   }))
+
+  // Custom tooltip to show heating as Active/Inactive
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <Box
+          sx={{
+            backgroundColor: '#1c1c1c',
+            border: '1px solid #2c2c2c',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            color: '#e1e1e1'
+          }}
+        >
+          <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>{data.time}</div>
+          <div style={{ color: '#03a9f4' }}>Current: {data.current.toFixed(1)}°C</div>
+          <div style={{ color: '#ffc107' }}>Target: {data.target.toFixed(1)}°C</div>
+          <div style={{ color: '#f44336' }}>
+            Heating: {data.heatingState === 'heating' ? 'Active' : 'Inactive'}
+          </div>
+        </Box>
+      )
+    }
+    return null
+  }
 
   // Calculate average target temperature for reference line
   const avgTarget = data.length > 0
@@ -132,12 +160,7 @@ const HistoryChart = ({ areaId }: HistoryChartProps) => {
             label={{ value: 'Temperature (°C)', angle: -90, position: 'insideLeft', fill: '#9e9e9e' }}
           />
           <Tooltip 
-            contentStyle={{
-              backgroundColor: '#1c1c1c',
-              border: '1px solid #2c2c2c',
-              borderRadius: '8px'
-            }}
-            labelStyle={{ color: '#e1e1e1' }}
+            content={<CustomTooltip />}
           />
           <Legend 
             wrapperStyle={{ color: '#e1e1e1' }}
