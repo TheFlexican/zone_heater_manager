@@ -23,6 +23,7 @@ import AcUnitIcon from '@mui/icons-material/AcUnit'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew'
 import TuneIcon from '@mui/icons-material/Tune'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { Zone } from '../types'
 import { setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
 
@@ -233,8 +234,16 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
               { value: 30, label: '30°' }
             ]}
             valueLabelDisplay="auto"
-            disabled={!area.enabled}
+            disabled={!area.enabled || area.devices.length === 0}
           />
+          {area.devices.length === 0 && (
+            <Box display="flex" alignItems="center" gap={1} mt={1} sx={{ color: 'warning.main' }}>
+              <InfoOutlinedIcon fontSize="small" />
+              <Typography variant="caption">
+                Add devices to this area to control temperature
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {area.current_temperature !== undefined && (

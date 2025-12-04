@@ -76,7 +76,9 @@ class SmartHeatingAPIView(HomeAssistantView):
             JSON response
         """
         try:
+            _LOGGER.debug("POST request to endpoint: %s", endpoint)
             data = await request.json()
+            _LOGGER.debug("POST data: %s", data)
             
             if endpoint.startswith("areas/") and endpoint.endswith("/devices"):
                 area_id = endpoint.split("/")[1]
@@ -413,6 +415,7 @@ class SmartHeatingAPIView(HomeAssistantView):
         Returns:
             JSON response
         """
+        _LOGGER.debug("set_temperature called for area_id: %s", area_id)
         temperature = data.get("temperature")
         
         if temperature is None:
@@ -421,6 +424,7 @@ class SmartHeatingAPIView(HomeAssistantView):
             )
         
         try:
+            _LOGGER.debug("Setting temperature for area %s to %s", area_id, temperature)
             self.area_manager.set_area_target_temperature(area_id, temperature)
             await self.area_manager.async_save()
             
@@ -442,6 +446,7 @@ class SmartHeatingAPIView(HomeAssistantView):
             
             return web.json_response({"success": True})
         except ValueError as err:
+            _LOGGER.error("ValueError setting temperature for area %s: %s", area_id, err)
             return web.json_response(
                 {"error": str(err)}, status=404
             )
