@@ -25,6 +25,10 @@ import SensorsIcon from '@mui/icons-material/Sensors'
 import WaterIcon from '@mui/icons-material/Water'
 import RouterIcon from '@mui/icons-material/Router'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
+import AcUnitIcon from '@mui/icons-material/AcUnit'
+import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew'
+import TuneIcon from '@mui/icons-material/Tune'
 import { Zone, Device } from '../types'
 import { getZones, getDevices, setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
@@ -155,6 +159,56 @@ const ZoneDetail = () => {
         return <RouterIcon />
       default:
         return <SensorsIcon />
+    }
+  }
+
+  const getDeviceStatusIcon = (device: any) => {
+    if (device.type === 'thermostat') {
+      if (device.hvac_action === 'heating') {
+        return <LocalFireDepartmentIcon fontSize="small" sx={{ color: 'error.main' }} />
+      } else if (device.state === 'heat') {
+        return <ThermostatIcon fontSize="small" sx={{ color: 'primary.main' }} />
+      } else {
+        return <AcUnitIcon fontSize="small" sx={{ color: 'info.main' }} />
+      }
+    } else if (device.type === 'valve') {
+      return <TuneIcon fontSize="small" sx={{ color: device.position > 0 ? 'warning.main' : 'text.secondary' }} />
+    } else if (device.type === 'temperature_sensor') {
+      return <SensorsIcon fontSize="small" sx={{ color: 'success.main' }} />
+    } else {
+      return <PowerSettingsNewIcon fontSize="small" sx={{ color: device.state === 'on' ? 'success.main' : 'text.secondary' }} />
+    }
+  }
+
+  const getDeviceStatus = (device: any) => {
+    if (device.type === 'thermostat') {
+      const parts = []
+      if (device.hvac_action) {
+        parts.push(device.hvac_action.toUpperCase())
+      }
+      if (device.current_temperature !== undefined) {
+        parts.push(`${device.current_temperature}°C`)
+      }
+      if (device.target_temperature !== undefined) {
+        parts.push(`→ ${device.target_temperature}°C`)
+      }
+      return parts.length > 0 ? parts.join(' · ') : device.state || 'unknown'
+    } else if (device.type === 'temperature_sensor') {
+      if (device.temperature !== undefined) {
+        return `${device.temperature}°C`
+      }
+      return device.state || 'unknown'
+    } else if (device.type === 'valve') {
+      const parts = []
+      if (device.position !== undefined) {
+        parts.push(`${device.position}%`)
+      }
+      if (device.state) {
+        parts.push(device.state)
+      }
+      return parts.length > 0 ? parts.join(' · ') : 'unknown'
+    } else {
+      return device.state || 'unknown'
     }
   }
 
@@ -296,6 +350,62 @@ const ZoneDetail = () => {
                     </Typography>
                   </Box>
                 </>
+              )}
+            </Paper>
+
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom color="text.primary">
+                Device Status
+              </Typography>
+              {area.devices.length === 0 ? (
+                <Alert severity="info">
+                  No devices assigned to this area.
+                </Alert>
+              ) : (
+                <List>
+                  {area.devices.map((device) => (
+                    <ListItem
+                      key={device.id}
+                      sx={{
+                        border: 1,
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        mb: 1,
+                      }}
+                    >
+                      <ListItemIcon>
+                        {getDeviceStatusIcon(device)}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography variant="body1" color="text.primary">
+                              {device.name || device.id}
+                            </Typography>
+                            {device.type === 'thermostat' && device.hvac_action && (
+                              <Chip 
+                                label={device.hvac_action} 
+                                size="small" 
+                                color={device.hvac_action === 'heating' ? 'error' : 'info'}
+                                sx={{ height: 20, fontSize: '0.7rem' }}
+                              />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {device.type.replace(/_/g, ' ')}
+                            </Typography>
+                            <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
+                              {getDeviceStatus(device)}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
               )}
             </Paper>
 
