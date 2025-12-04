@@ -211,7 +211,7 @@ class ClimateController:
                     outdoor_temp = await self._async_get_outdoor_temperature(area)
                     self._area_heating_events[area_id] = await self.learning_engine.async_start_heating_event(
                         area_id=area_id,
-                        start_temp=current_temp,
+                        current_temp=current_temp,
                         target_temp=target_temp,
                         outdoor_temp=outdoor_temp
                     )
