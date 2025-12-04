@@ -397,19 +397,21 @@ data:
 ```
 
 #### `smart_heating.set_opentherm_gateway`
-Configure the global OpenTherm gateway for boiler control.
+Configure the global OpenTherm gateway for boiler control. **This is completely optional** - only use if you have an OpenTherm gateway device.
 
 **Parameters:**
-- `gateway_id` (optional): Entity ID of the OpenTherm gateway climate entity
+- `gateway_id` (optional): Entity ID of the OpenTherm gateway climate entity (e.g., `climate.opentherm_gateway`)
 - `enabled` (optional): Enable/disable OpenTherm control (default: true)
 
 **Example:**
 ```yaml
 service: smart_heating.set_opentherm_gateway
 data:
-  gateway_id: "climate.opentherm_gateway"
+  gateway_id: "climate.opentherm_gateway"  # Select YOUR gateway
   enabled: true
 ```
+
+**Note**: The system works without OpenTherm. You only need this if you want centralized boiler control across all areas.
 
 #### `smart_heating.set_trv_temperatures`
 Configure global settings for temperature-controlled TRVs. **System dynamically detects device capabilities** - no need to configure per-device.
