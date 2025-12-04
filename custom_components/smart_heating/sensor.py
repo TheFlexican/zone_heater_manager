@@ -32,7 +32,7 @@ async def async_setup_entry(
     
     # Create sensor entities
     entities = [
-        ZoneHeaterManagerStatusSensor(coordinator, entry),
+        SmartHeatingStatusSensor(coordinator, entry),
     ]
     
     # Add entities
@@ -40,7 +40,7 @@ async def async_setup_entry(
     _LOGGER.info("Smart Heating sensor platform setup complete")
 
 
-class ZoneHeaterManagerStatusSensor(CoordinatorEntity, SensorEntity):
+class SmartHeatingStatusSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Smart Heating Status Sensor."""
 
     def __init__(
@@ -61,7 +61,7 @@ class ZoneHeaterManagerStatusSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_status"
         self._attr_icon = "mdi:radiator"
         
-        _LOGGER.debug("ZoneHeaterManagerStatusSensor initialized with unique_id: %s", self._attr_unique_id)
+        _LOGGER.debug("SmartHeatingStatusSensor initialized with unique_id: %s", self._attr_unique_id)
 
     @property
     def native_value(self) -> str:
@@ -88,12 +88,12 @@ class ZoneHeaterManagerStatusSensor(CoordinatorEntity, SensorEntity):
         """
         attributes = {
             "integration": "smart_heating",
-            "version": "0.0.1",
+            "version": "2.0.0",
         }
         
         # Add coordinator data to attributes if available
         if self.coordinator.data:
-            attributes["last_update"] = self.coordinator.last_update_success_time
+            attributes["zone_count"] = self.coordinator.data.get("zone_count", 0)
         
         return attributes
 

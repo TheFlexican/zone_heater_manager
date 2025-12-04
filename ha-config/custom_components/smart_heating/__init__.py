@@ -1,4 +1,5 @@
 """The Smart Heating integration."""
+import asyncio
 import logging
 import voluptuous as vol
 
@@ -6,6 +7,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.event import async_track_time_interval
+from datetime import timedelta
 
 from .const import (
     ATTR_DEVICE_ID,
@@ -31,10 +34,14 @@ from .const import (
 )
 from .coordinator import SmartHeatingCoordinator
 from .area_manager import AreaManager
-from .api import async_setup_api
-from .websocket import async_setup_websocket
+from .api import setup_api
+from .websocket import setup_websocket
+from .climate_controller import ClimateController
 
 _LOGGER = logging.getLogger(__name__)
+
+# Update interval for climate control (30 seconds)
+CLIMATE_UPDATE_INTERVAL = timedelta(seconds=30)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -65,29 +72,43 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     _LOGGER.debug("Smart Heating coordinator stored in hass.data")
     
+    # Create and start climate controller
+    climate_controller = ClimateController(hass, area_manager)
+    
+    # Store climate controller
+    hass.data[DOMAIN]["climate_controller"] = climate_controller
+    
+    # Set up periodic heating control (every 30 seconds)
+    async def async_control_heating_wrapper(now):
+        """Wrapper for periodic climate control."""
+        try:
+            await climate_controller.async_control_heating()
+        except Exception as err:
+            _LOGGER.error("Error in climate control: %s", err)
+    
+    # Start the periodic control
+    hass.data[DOMAIN]["climate_unsub"] = async_track_time_interval(
+        hass, async_control_heating_wrapper, CLIMATE_UPDATE_INTERVAL
+    )
+    
+    # Run initial control after 5 seconds
+    async def run_initial_control():
+        await asyncio.sleep(5)
+        await climate_controller.async_control_heating()
+    
+    hass.async_create_task(run_initial_control())
+    
+    _LOGGER.info("Climate controller started with 30-second update interval")
+    
     # Forward the setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
     # Set up REST API and WebSocket
-    async_setup_api(hass, area_manager)
-    async_setup_websocket(hass, area_manager)
-    
-    # Register static path for frontend
-    hass.http.register_static_path(
-        "/smart_heating",
-        hass.config.path("custom_components/smart_heating/frontend/dist"),
-        True
-    )
+    await setup_api(hass, area_manager)
+    await setup_websocket(hass)
     
     # Register sidebar panel
-    await hass.components.frontend.async_register_built_in_panel(
-        component_name="custom",
-        sidebar_title="Smart Heating",
-        sidebar_icon="mdi:radiator",
-        frontend_url_path="smart_heating",
-        config={"url": "/smart_heating_ui"},
-        require_admin=False,
-    )
+    await async_register_panel(hass, entry)
     
     # Register services
     await async_setup_services(hass, coordinator)
@@ -95,6 +116,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info("Smart Heating integration setup complete")
     
     return True
+
+
+async def async_register_panel(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Register the frontend panel.
+    
+    Args:
+        hass: Home Assistant instance
+        entry: Config entry
+    """
+    from homeassistant.components.frontend import async_register_built_in_panel
+    
+    # Register panel (this is a sync function despite the name)
+    async_register_built_in_panel(
+        hass,
+        component_name="iframe",
+        sidebar_title="Smart Heating",
+        sidebar_icon="mdi:radiator",
+        frontend_url_path="smart_heating",
+        config={"url": "/smart_heating_ui"},
+        require_admin=False,
+    )
+    
+    _LOGGER.info("Smart Heating panel registered in sidebar")
 
 
 async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoordinator) -> None:
@@ -281,6 +325,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     
     if unload_ok:
+        # Stop climate controller
+        if "climate_unsub" in hass.data[DOMAIN]:
+            hass.data[DOMAIN]["climate_unsub"]()
+            _LOGGER.debug("Climate controller stopped")
+        
         # Remove coordinator from hass.data
         hass.data[DOMAIN].pop(entry.entry_id)
         _LOGGER.debug("Smart Heating coordinator removed from hass.data")

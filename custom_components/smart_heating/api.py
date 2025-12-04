@@ -7,6 +7,7 @@ import aiohttp_cors
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er, area_registry as ar
 
 from .const import DOMAIN
 from .area_manager import AreaManager
@@ -14,12 +15,12 @@ from .area_manager import AreaManager
 _LOGGER = logging.getLogger(__name__)
 
 
-class ZoneHeaterAPIView(HomeAssistantView):
+class SmartHeatingAPIView(HomeAssistantView):
     """API view for Smart Heating."""
 
     url = "/api/smart_heating/{endpoint:.*}"
     name = "api:smart_heating"
-    requires_auth = True
+    requires_auth = False
 
     def __init__(self, hass: HomeAssistant, area_manager: AreaManager) -> None:
         """Initialize the API view.
@@ -42,9 +43,9 @@ class ZoneHeaterAPIView(HomeAssistantView):
             JSON response
         """
         try:
-            if endpoint == "zones":
+            if endpoint == "areas":
                 return await self.get_zones(request)
-            elif endpoint.startswith("zones/"):
+            elif endpoint.startswith("areas/"):
                 area_id = endpoint.split("/")[1]
                 return await self.get_area(request, area_id)
             elif endpoint == "devices":
@@ -74,18 +75,21 @@ class ZoneHeaterAPIView(HomeAssistantView):
         try:
             data = await request.json()
             
-            if endpoint == "zones":
+            if endpoint == "areas":
                 return await self.create_area(request, data)
-            elif endpoint.startswith("zones/") and endpoint.endswith("/devices"):
+            elif endpoint.startswith("areas/") and endpoint.endswith("/devices"):
                 area_id = endpoint.split("/")[1]
                 return await self.add_device(request, area_id, data)
-            elif endpoint.startswith("zones/") and endpoint.endswith("/temperature"):
+            elif endpoint.startswith("areas/") and endpoint.endswith("/schedules"):
+                area_id = endpoint.split("/")[1]
+                return await self.add_schedule(request, area_id, data)
+            elif endpoint.startswith("areas/") and endpoint.endswith("/temperature"):
                 area_id = endpoint.split("/")[1]
                 return await self.set_temperature(request, area_id, data)
-            elif endpoint.startswith("zones/") and endpoint.endswith("/enable"):
+            elif endpoint.startswith("areas/") and endpoint.endswith("/enable"):
                 area_id = endpoint.split("/")[1]
                 return await self.enable_area(request, area_id)
-            elif endpoint.startswith("zones/") and endpoint.endswith("/disable"):
+            elif endpoint.startswith("areas/") and endpoint.endswith("/disable"):
                 area_id = endpoint.split("/")[1]
                 return await self.disable_area(request, area_id)
             else:
@@ -109,12 +113,17 @@ class ZoneHeaterAPIView(HomeAssistantView):
             JSON response
         """
         try:
-            if endpoint.startswith("zones/") and "/devices/" in endpoint:
+            if endpoint.startswith("areas/") and "/devices/" in endpoint:
                 parts = endpoint.split("/")
                 area_id = parts[1]
                 device_id = parts[3]
                 return await self.remove_device(request, area_id, device_id)
-            elif endpoint.startswith("zones/"):
+            elif endpoint.startswith("areas/") and "/schedules/" in endpoint:
+                parts = endpoint.split("/")
+                area_id = parts[1]
+                schedule_id = parts[3]
+                return await self.remove_schedule(request, area_id, schedule_id)
+            elif endpoint.startswith("areas/"):
                 area_id = endpoint.split("/")[1]
                 return await self.delete_area(request, area_id)
             else:
@@ -128,36 +137,58 @@ class ZoneHeaterAPIView(HomeAssistantView):
             )
 
     async def get_zones(self, request: web.Request) -> web.Response:
-        """Get all zones.
+        """Get all Home Assistant areas.
         
         Args:
             request: Request object
             
         Returns:
-            JSON response with zones
+            JSON response with HA areas
         """
-        zones = self.area_manager.get_all_areas()
-        zones_data = []
+        # Get Home Assistant's area registry
+        area_registry = ar.async_get(self.hass)
         
-        for area_id, area in zones.items():
-            zones_data.append({
-                "id": zone.area_id,
-                "name": zone.name,
-                "enabled": zone.enabled,
-                "state": zone.state,
-                "target_temperature": zone.target_temperature,
-                "current_temperature": zone.current_temperature,
-                "devices": [
-                    {
-                        "id": dev_id,
-                        "type": dev_data["type"],
-                        "mqtt_topic": dev_data.get("mqtt_topic"),
-                    }
-                    for dev_id, dev_data in zone.devices.items()
-                ],
-            })
+        areas_data = []
+        for area in area_registry.areas.values():
+            area_id = area.id
+            area_name = area.name
+            
+            # Check if we have stored data for this area
+            stored_area = self.area_manager.get_area(area_id)
+            
+            if stored_area:
+                # Use stored data
+                areas_data.append({
+                    "id": area_id,
+                    "name": area_name,
+                    "enabled": stored_area.enabled,
+                    "state": stored_area.state,
+                    "target_temperature": stored_area.target_temperature,
+                    "current_temperature": stored_area.current_temperature,
+                    "devices": [
+                        {
+                            "id": dev_id,
+                            "type": dev_data["type"],
+                            "mqtt_topic": dev_data.get("mqtt_topic"),
+                        }
+                        for dev_id, dev_data in stored_area.devices.items()
+                    ],
+                    "schedules": [s.to_dict() for s in stored_area.schedules.values()],
+                })
+            else:
+                # Default data for HA area without stored settings
+                areas_data.append({
+                    "id": area_id,
+                    "name": area_name,
+                    "enabled": True,
+                    "state": "idle",
+                    "target_temperature": 20.0,
+                    "current_temperature": None,
+                    "devices": [],
+                    "schedules": [],
+                })
         
-        return web.json_response({"zones": zones_data})
+        return web.json_response({"zones": areas_data})
 
     async def get_zone(self, request: web.Request, area_id: str) -> web.Response:
         """Get a specific zone.
@@ -207,7 +238,7 @@ class ZoneHeaterAPIView(HomeAssistantView):
         devices = []
         
         # Get all MQTT entities from Home Assistant
-        entity_registry = self.hass.helpers.entity_registry.async_get(self.hass)
+        entity_registry = er.async_get(self.hass)
         
         # Find entities that are from MQTT and could be heating-related
         heating_platforms = ["climate", "sensor", "number", "switch"]
@@ -245,7 +276,7 @@ class ZoneHeaterAPIView(HomeAssistantView):
                 # Check if device is already assigned to a zone
                 assigned_zones = []
                 for area_id, area in self.area_manager.get_all_areas().items():
-                    if entity.entity_id in zone.devices:
+                    if entity.entity_id in area.devices:
                         assigned_zones.append(area_id)
                 
                 devices.append({
@@ -274,12 +305,12 @@ class ZoneHeaterAPIView(HomeAssistantView):
         Returns:
             JSON response with status
         """
-        zones = self.area_manager.get_all_areas()
+        areas = self.area_manager.get_all_areas()
         
         status = {
             "zone_count": len(areas),
-            "active_zones": sum(1 for z in zones.values() if z.enabled),
-            "total_devices": sum(len(z.devices) for z in zones.values()),
+            "active_zones": sum(1 for z in areas.values() if z.enabled),
+            "total_devices": sum(len(z.devices) for z in areas.values()),
         }
         
         return web.json_response(status)
@@ -295,16 +326,16 @@ class ZoneHeaterAPIView(HomeAssistantView):
             JSON response
         """
         area_id = data.get("area_id")
-        zone_name = data.get("zone_name")
+        area_name = data.get("zone_name")
         temperature = data.get("temperature", 20.0)
         
-        if not area_id or not zone_name:
+        if not area_id or not area_name:
             return web.json_response(
                 {"error": "area_id and zone_name are required"}, status=400
             )
         
         try:
-            zone = self.area_manager.create_area(area_id, area_name, temperature)
+            area = self.area_manager.create_area(area_id, area_name, temperature)
             await self.area_manager.async_save()
             
             return web.json_response({
@@ -363,6 +394,18 @@ class ZoneHeaterAPIView(HomeAssistantView):
             )
         
         try:
+            # Ensure area exists in storage
+            if self.area_manager.get_area(area_id) is None:
+                # Create area entry for this HA area
+                area_registry = ar.async_get(self.hass)
+                ha_area = area_registry.async_get_area(area_id)
+                if ha_area:
+                    self.area_manager.create_area(area_id, ha_area.name)
+                else:
+                    return web.json_response(
+                        {"error": f"Area {area_id} not found"}, status=404
+                    )
+            
             self.area_manager.add_device_to_area(
                 area_id, device_id, device_type, mqtt_topic
             )
@@ -467,6 +510,186 @@ class ZoneHeaterAPIView(HomeAssistantView):
                 {"error": str(err)}, status=404
             )
 
+    async def add_schedule(
+        self, request: web.Request, area_id: str, data: dict
+    ) -> web.Response:
+        """Add schedule to an area.
+        
+        Args:
+            request: Request object
+            area_id: Area identifier
+            data: Schedule data (time, temperature, days)
+            
+        Returns:
+            JSON response
+        """
+        import uuid
+        
+        schedule_id = data.get("id") or str(uuid.uuid4())
+        time = data.get("time")
+        temperature = data.get("temperature")
+        days = data.get("days")
+        
+        if not time or temperature is None:
+            return web.json_response(
+                {"error": "time and temperature are required"}, status=400
+            )
+        
+        try:
+            # Ensure area exists in storage
+            if self.area_manager.get_area(area_id) is None:
+                # Create area entry for this HA area
+                area_registry = ar.async_get(self.hass)
+                ha_area = area_registry.async_get_area(area_id)
+                if ha_area:
+                    self.area_manager.create_area(area_id, ha_area.name)
+                else:
+                    return web.json_response(
+                        {"error": f"Area {area_id} not found"}, status=404
+                    )
+            
+            schedule = self.area_manager.add_schedule_to_area(
+                area_id, schedule_id, time, temperature, days
+            )
+            await self.area_manager.async_save()
+            
+            return web.json_response({
+                "success": True,
+                "schedule": schedule.to_dict()
+            })
+        except ValueError as err:
+            return web.json_response(
+                {"error": str(err)}, status=400
+            )
+
+    async def remove_schedule(
+        self, request: web.Request, area_id: str, schedule_id: str
+    ) -> web.Response:
+        """Remove schedule from an area.
+        
+        Args:
+            request: Request object
+            area_id: Area identifier
+            schedule_id: Schedule identifier
+            
+        Returns:
+            JSON response
+        """
+        try:
+            self.area_manager.remove_schedule_from_area(area_id, schedule_id)
+            await self.area_manager.async_save()
+            
+            return web.json_response({"success": True})
+        except ValueError as err:
+            return web.json_response(
+                {"error": str(err)}, status=404
+            )
+
+
+class SmartHeatingUIView(HomeAssistantView):
+    """UI view for Smart Heating (no auth required for serving static HTML)."""
+
+    url = "/smart_heating_ui"
+    name = "smart_heating:ui"
+    requires_auth = False
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Initialize the UI view.
+        
+        Args:
+            hass: Home Assistant instance
+        """
+        self.hass = hass
+
+    async def get(self, request: web.Request) -> web.Response:
+        """Serve the UI.
+        
+        Args:
+            request: Request object
+            
+        Returns:
+            HTML response with React app
+        """
+        import os
+        
+        # Path to the built frontend
+        frontend_path = self.hass.config.path("custom_components/smart_heating/frontend/dist")
+        index_path = os.path.join(frontend_path, "index.html")
+        
+        try:
+            with open(index_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            
+            # Fix asset paths to be relative to our endpoint
+            html_content = html_content.replace('src="/', 'src="/smart_heating_static/')
+            html_content = html_content.replace('href="/', 'href="/smart_heating_static/')
+            
+            return web.Response(
+                text=html_content,
+                content_type="text/html",
+                charset="utf-8"
+            )
+        except FileNotFoundError:
+            _LOGGER.error("Frontend build not found at %s", frontend_path)
+            return web.Response(
+                text="<h1>Frontend not built</h1><p>Run: cd frontend && npm run build</p>",
+                content_type="text/html",
+                status=500
+            )
+
+
+class SmartHeatingStaticView(HomeAssistantView):
+    """Serve static files for Smart Heating UI."""
+
+    url = "/smart_heating_static/{filename:.+}"
+    name = "smart_heating:static"
+    requires_auth = False
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Initialize the static view.
+        
+        Args:
+            hass: Home Assistant instance
+        """
+        self.hass = hass
+
+    async def get(self, request: web.Request, filename: str) -> web.Response:
+        """Serve static files.
+        
+        Args:
+            request: Request object
+            filename: File to serve
+            
+        Returns:
+            File response
+        """
+        import os
+        import mimetypes
+        
+        # Path to the built frontend
+        frontend_path = self.hass.config.path("custom_components/smart_heating/frontend/dist")
+        file_path = os.path.join(frontend_path, filename)
+        
+        # Security check - ensure file is within frontend directory
+        if not os.path.abspath(file_path).startswith(os.path.abspath(frontend_path)):
+            return web.Response(text="Forbidden", status=403)
+        
+        try:
+            # Determine content type
+            content_type, _ = mimetypes.guess_type(filename)
+            if content_type is None:
+                content_type = "application/octet-stream"
+            
+            with open(file_path, "rb") as f:
+                content = f.read()
+            
+            return web.Response(
+                body=content,
+                content_type=content_type
+            )
+        except FileNotFoundError:
+            return web.Response(text="Not Found", status=404)
+
 
 async def setup_api(hass: HomeAssistant, area_manager: AreaManager) -> None:
     """Set up the API.
@@ -475,7 +698,16 @@ async def setup_api(hass: HomeAssistant, area_manager: AreaManager) -> None:
         hass: Home Assistant instance
         area_manager: Zone manager instance
     """
-    view = ZoneHeaterAPIView(hass, area_manager)
-    hass.http.register_view(view)
+    # Register API view
+    api_view = SmartHeatingAPIView(hass, area_manager)
+    hass.http.register_view(api_view)
     
-    _LOGGER.info("Smart Heating API registered")
+    # Register UI view (no auth required for serving HTML)
+    ui_view = SmartHeatingUIView(hass)
+    hass.http.register_view(ui_view)
+    
+    # Register static files view
+    static_view = SmartHeatingStaticView(hass)
+    hass.http.register_view(static_view)
+    
+    _LOGGER.info("Smart Heating API, UI, and static files registered")

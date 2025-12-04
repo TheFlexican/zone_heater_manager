@@ -1,26 +1,20 @@
-import { useState } from 'react'
 import {
   Box,
-  Button,
   Grid,
   Typography,
   CircularProgress,
   Alert
 } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
 import ZoneCard from './ZoneCard'
-import CreateZoneDialog from './CreateZoneDialog'
 import { Zone } from '../types'
 
-interface AreaListProps {
-  zones: Area[]
+interface ZoneListProps {
+  zones: Zone[]
   loading: boolean
   onUpdate: () => void
 }
 
-const ZoneList = ({ zones, loading, onUpdate }: AreaListProps) => {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-
+const ZoneList = ({ zones, loading, onUpdate }: ZoneListProps) => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="400px">
@@ -31,22 +25,15 @@ const ZoneList = ({ zones, loading, onUpdate }: AreaListProps) => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box mb={3}>
         <Typography variant="h4">
           Zones
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
-        >
-          Create Zone
-        </Button>
       </Box>
 
       {zones.length === 0 ? (
         <Alert severity="info">
-          No zones configured yet. Click "Create Zone" to get started!
+          No areas found. Please configure areas in Home Assistant first (Settings → Areas & Zones → Areas).
         </Alert>
       ) : (
         <Grid container spacing={3}>
@@ -57,12 +44,6 @@ const ZoneList = ({ zones, loading, onUpdate }: AreaListProps) => {
           ))}
         </Grid>
       )}
-
-      <CreateZoneDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSuccess={onUpdate}
-      />
     </Box>
   )
 }

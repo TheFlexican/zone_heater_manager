@@ -46,7 +46,7 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Updating Smart Heating data")
             
             # Get all zones
-            zones = self.area_manager.get_all_areas()
+            areas = self.area_manager.get_all_areas()
             
             # Build data structure
             data = {
@@ -56,13 +56,13 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
             }
             
             # Add zone information
-            for area_id, area in zones.items():
+            for area_id, area in areas.items():
                 data["zones"][area_id] = {
-                    "name": zone.name,
-                    "enabled": zone.enabled,
-                    "state": zone.state,
-                    "target_temperature": zone.target_temperature,
-                    "current_temperature": zone.current_temperature,
+                    "name": area.name,
+                    "enabled": area.enabled,
+                    "state": area.state,
+                    "target_temperature": area.target_temperature,
+                    "current_temperature": area.current_temperature,
                     "device_count": len(area.devices),
                 }
             

@@ -13,7 +13,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class ZoneHeaterManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class SmartHeatingConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Smart Heating."""
 
     VERSION = 1
@@ -66,19 +66,11 @@ class ZoneHeaterManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         Returns:
             OptionsFlow: Options flow handler
         """
-        return ZoneHeaterManagerOptionsFlowHandler(config_entry)
+        return SmartHeatingOptionsFlowHandler()
 
 
-class ZoneHeaterManagerOptionsFlowHandler(config_entries.OptionsFlow):
+class SmartHeatingOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for Smart Heating."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow.
-        
-        Args:
-            config_entry: Config entry instance
-        """
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

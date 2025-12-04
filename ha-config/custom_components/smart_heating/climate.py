@@ -47,7 +47,7 @@ async def async_setup_entry(
     _LOGGER.info("Smart Heating climate platform setup complete with %d zones", len(entities))
 
 
-class ZoneClimate(CoordinatorEntity, ClimateEntity):
+class AreaClimate(CoordinatorEntity, ClimateEntity):
     """Representation of a Zone Climate control."""
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
@@ -65,27 +65,27 @@ class ZoneClimate(CoordinatorEntity, ClimateEntity):
         self,
         coordinator: SmartHeatingCoordinator,
         entry: ConfigEntry,
-        area: Zone,
+        area: Area,
     ) -> None:
         """Initialize the climate entity.
         
         Args:
             coordinator: The data update coordinator
             entry: Config entry
-            area: Zone instance
+            area: Area instance
         """
         super().__init__(coordinator)
         
-        self._zone = zone
+        self._area = area
         
         # Entity attributes
-        self._attr_name = f"Zone {zone.name}"
-        self._attr_unique_id = f"{entry.entry_id}_climate_{zone.area_id}"
+        self._attr_name = f"Zone {area.name}"
+        self._attr_unique_id = f"{entry.entry_id}_climate_{area.area_id}"
         self._attr_icon = "mdi:thermostat"
         
         _LOGGER.debug(
-            "ZoneClimate initialized for zone %s with unique_id: %s",
-            zone.area_id,
+            "AreaClimate initialized for zone %s with unique_id: %s",
+            area.area_id,
             self._attr_unique_id,
         )
 
@@ -96,7 +96,7 @@ class ZoneClimate(CoordinatorEntity, ClimateEntity):
         Returns:
             Current temperature or None
         """
-        return self._zone.current_temperature
+        return self._area.current_temperature
 
     @property
     def target_temperature(self) -> float | None:
@@ -105,7 +105,7 @@ class ZoneClimate(CoordinatorEntity, ClimateEntity):
         Returns:
             Target temperature or None
         """
-        return self._zone.target_temperature
+        return self._area.target_temperature
 
     @property
     def hvac_mode(self) -> HVACMode:
@@ -114,7 +114,7 @@ class ZoneClimate(CoordinatorEntity, ClimateEntity):
         Returns:
             Current HVAC mode
         """
-        if self._zone.enabled:
+        if self._area.enabled:
             return HVACMode.HEAT
         return HVACMode.OFF
 
@@ -128,11 +128,11 @@ class ZoneClimate(CoordinatorEntity, ClimateEntity):
         if temperature is None:
             return
         
-        _LOGGER.debug("Setting zone %s temperature to %.1f°C", self._zone.area_id, temperature)
+        _LOGGER.debug("Setting zone %s temperature to %.1f°C", self._area.area_id, temperature)
         
         # Update zone manager
         self.coordinator.area_manager.set_area_target_temperature(
-            self._zone.area_id, temperature
+            self._area.area_id, temperature
         )
         
         # Save to storage
@@ -147,12 +147,12 @@ class ZoneClimate(CoordinatorEntity, ClimateEntity):
         Args:
             hvac_mode: New HVAC mode
         """
-        _LOGGER.debug("Setting zone %s HVAC mode to %s", self._zone.area_id, hvac_mode)
+        _LOGGER.debug("Setting zone %s HVAC mode to %s", self._area.area_id, hvac_mode)
         
         if hvac_mode == HVACMode.HEAT:
-            self.coordinator.area_manager.enable_area(self._zone.area_id)
+            self.coordinator.area_manager.enable_area(self._area.area_id)
         elif hvac_mode == HVACMode.OFF:
-            self.coordinator.area_manager.disable_area(self._zone.area_id)
+            self.coordinator.area_manager.disable_area(self._area.area_id)
         
         # Save to storage
         await self.coordinator.area_manager.async_save()
@@ -168,17 +168,17 @@ class ZoneClimate(CoordinatorEntity, ClimateEntity):
             Dictionary of additional attributes
         """
         attributes = {
-            "area_id": self._zone.area_id,
-            "zone_name": self._zone.name,
-            "zone_state": self._zone.state,
-            "device_count": len(self._zone.devices),
-            "devices": list(self._zone.devices.keys()),
+            "area_id": self._area.area_id,
+            "zone_name": self._area.name,
+            "zone_state": self._area.state,
+            "device_count": len(self._area.devices),
+            "devices": list(self._area.devices.keys()),
         }
         
         # Add device type counts
-        thermostats = self._zone.get_thermostats()
-        temp_sensors = self._zone.get_temperature_sensors()
-        opentherm_gateways = self._zone.get_opentherm_gateways()
+        thermostats = self._area.get_thermostats()
+        temp_sensors = self._area.get_temperature_sensors()
+        opentherm_gateways = self._area.get_opentherm_gateways()
         
         if thermostats:
             attributes["thermostats"] = thermostats

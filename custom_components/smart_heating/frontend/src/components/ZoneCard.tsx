@@ -1,39 +1,41 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Card,
   CardContent,
-  CardActions,
   Typography,
   IconButton,
   Box,
   Chip,
   Slider,
   Switch,
-  Tooltip,
   Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText
+  ListItemText,
+  List,
+  ListItem
 } from '@mui/material'
+import { Droppable } from 'react-beautiful-dnd'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
-import DeleteIcon from '@mui/icons-material/Delete'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
 import SensorsIcon from '@mui/icons-material/Sensors'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import AcUnitIcon from '@mui/icons-material/AcUnit'
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import { Zone } from '../types'
-import { setZoneTemperature, enableZone, disableZone, deleteZone } from '../api'
+import { setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
 
-interface AreaCardProps {
-  zone: Area
+interface ZoneCardProps {
+  zone: Zone
   onUpdate: () => void
 }
 
-const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
+const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
+  const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [temperature, setTemperature] = useState(zone.target_temperature)
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation()
     setAnchorEl(event.currentTarget)
   }
 
@@ -41,7 +43,12 @@ const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
     setAnchorEl(null)
   }
 
-  const handleToggle = async () => {
+  const handleCardClick = () => {
+    navigate(`/zone/${zone.id}`)
+  }
+
+  const handleToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.stopPropagation()
     try {
       if (zone.enabled) {
         await disableZone(zone.id)
@@ -54,12 +61,14 @@ const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
     }
   }
 
-  const handleTemperatureChange = async (_event: Event, value: number | number[]) => {
+  const handleTemperatureChange = async (event: Event, value: number | number[]) => {
+    event.stopPropagation()
     const newTemp = value as number
     setTemperature(newTemp)
   }
 
-  const handleTemperatureCommit = async (_event: Event | React.SyntheticEvent, value: number | number[]) => {
+  const handleTemperatureCommit = async (event: Event | React.SyntheticEvent, value: number | number[]) => {
+    event.stopPropagation()
     try {
       await setZoneTemperature(zone.id, value as number)
       onUpdate()
@@ -68,16 +77,17 @@ const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
     }
   }
 
-  const handleDelete = async () => {
-    if (window.confirm(`Are you sure you want to delete zone "${zone.name}"?`)) {
-      try {
-        await deleteZone(zone.id)
-        onUpdate()
-      } catch (error) {
-        console.error('Failed to delete zone:', error)
-      }
+  const handleRemoveDevice = async (deviceId: string) => {
+    try {
+      await removeDeviceFromZone(zone.id, deviceId)
+      onUpdate()
+    } catch (error) {
+      console.error('Failed to remove device:', error)
     }
-    handleMenuClose()
+  }
+
+  const handleSliderClick = (event: React.MouseEvent) => {
+    event.stopPropagation()
   }
 
   const getStateColor = () => {
@@ -107,7 +117,23 @@ const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
   }
 
   return (
-    <Card elevation={2}>
+    <Droppable droppableId={`zone-${zone.id}`}>
+      {(provided, snapshot) => (
+        <Card 
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          elevation={2}
+          onClick={handleCardClick}
+          sx={{
+            bgcolor: snapshot.isDraggingOver ? 'rgba(3, 169, 244, 0.05)' : 'background.paper',
+            border: snapshot.isDraggingOver ? '2px dashed #03a9f4' : 'none',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+            '&:hover': {
+              bgcolor: snapshot.isDraggingOver ? 'rgba(3, 169, 244, 0.05)' : 'rgba(255, 255, 255, 0.05)',
+            },
+          }}
+        >
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
           <Box>
@@ -133,7 +159,7 @@ const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
           </Box>
         </Box>
 
-        <Box my={3}>
+        <Box my={3} onClick={handleSliderClick}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
             <Typography variant="body2" color="text.secondary">
               Target Temperature
@@ -169,12 +195,50 @@ const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
           </Box>
         )}
 
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={1} mb={zone.devices.length > 0 ? 2 : 0}>
           <SensorsIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
             {zone.devices.length} device(s)
+            {snapshot.isDraggingOver && ' - Drop here to add'}
           </Typography>
         </Box>
+
+        {zone.devices.length > 0 && (
+          <List dense sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 1 }}>
+            {zone.devices.map((device) => (
+              <ListItem
+                key={device.id}
+                secondaryAction={
+                  <IconButton 
+                    edge="end" 
+                    size="small" 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRemoveDevice(device.id)
+                    }}
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    <RemoveCircleOutlineIcon fontSize="small" />
+                  </IconButton>
+                }
+              >
+                <ListItemText
+                  primary={device.name || device.id}
+                  primaryTypographyProps={{ 
+                    variant: 'body2',
+                    color: 'text.primary'
+                  }}
+                  secondary={device.type.replace(/_/g, ' ')}
+                  secondaryTypographyProps={{
+                    variant: 'caption',
+                    color: 'text.secondary'
+                  }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+        {provided.placeholder}
       </CardContent>
 
       <Menu
@@ -182,14 +246,10 @@ const ZoneCard = ({ zone, onUpdate }: AreaCardProps) => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete Zone</ListItemText>
-        </MenuItem>
       </Menu>
     </Card>
+      )}
+    </Droppable>
   )
 }
 

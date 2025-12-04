@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Zone, Device, ZoneCreate, DeviceAdd } from './types'
+import { Area, Device, AreaCreate, DeviceAdd, ScheduleEntry } from './types'
 
 const API_BASE = '/api/smart_heating'
 
@@ -59,4 +59,18 @@ export const getDevices = async (): Promise<Device[]> => {
 export const getStatus = async (): Promise<any> => {
   const response = await axios.get(`${API_BASE}/status`)
   return response.data
+}
+
+export const addScheduleToZone = async (
+  areaId: string,
+  schedule: Omit<ScheduleEntry, 'id'>
+): Promise<void> => {
+  await axios.post(`${API_BASE}/areas/${areaId}/schedules`, schedule)
+}
+
+export const removeScheduleFromZone = async (
+  areaId: string,
+  scheduleId: string
+): Promise<void> => {
+  await axios.delete(`${API_BASE}/areas/${areaId}/schedules/${scheduleId}`)
 }

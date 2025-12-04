@@ -37,11 +37,11 @@ def websocket_subscribe_updates(
         msg: Message data
     """
     @callback
-    def forward_messages(event):
+    def forward_messages():
         """Forward coordinator updates to websocket."""
         connection.send_message(result_message(msg["id"], {
             "event": "update",
-            "data": event.data
+            "data": coordinator.data
         }))
 
     # Get the coordinator

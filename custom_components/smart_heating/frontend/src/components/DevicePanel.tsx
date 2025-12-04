@@ -9,6 +9,7 @@ import {
   Chip,
   Divider
 } from '@mui/material'
+import { Droppable, Draggable } from 'react-beautiful-dnd'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
 import SensorsIcon from '@mui/icons-material/Sensors'
 import RouterIcon from '@mui/icons-material/Router'
@@ -20,7 +21,7 @@ interface DevicePanelProps {
   onUpdate: () => void
 }
 
-const DevicePanel = ({ devices, onUpdate }: DevicePanelProps) => {
+const DevicePanel = ({ devices }: DevicePanelProps) => {
   const getDeviceIcon = (type: string) => {
     switch (type) {
       case 'thermostat':
@@ -49,11 +50,12 @@ const DevicePanel = ({ devices, onUpdate }: DevicePanelProps) => {
         borderLeft: 1,
         borderColor: 'divider',
         borderRadius: 0,
+        bgcolor: 'background.paper',
       }}
       elevation={0}
     >
-      <Box sx={{ p: 2, bgcolor: 'background.default' }}>
-        <Typography variant="h6">
+      <Box sx={{ p: 2 }}>
+        <Typography variant="h6" color="text.primary">
           Available Devices
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -74,35 +76,57 @@ const DevicePanel = ({ devices, onUpdate }: DevicePanelProps) => {
             </Typography>
           </Box>
         ) : (
-          <List>
-            {devices.map((device) => (
-              <ListItem
-                key={device.id}
-                sx={{
-                  cursor: 'grab',
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                  },
-                }}
-                draggable
-              >
-                <ListItemIcon>
-                  {getDeviceIcon(device.type)}
-                </ListItemIcon>
-                <ListItemText
-                  primary={device.name || device.id}
-                  secondary={
-                    <Chip
-                      label={getDeviceTypeLabel(device.type)}
-                      size="small"
-                      variant="outlined"
-                      sx={{ mt: 0.5 }}
-                    />
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
+          <Droppable droppableId="devices-panel" isDropDisabled={true}>
+            {(provided) => (
+              <List ref={provided.innerRef} {...provided.droppableProps}>
+                {devices.map((device, index) => (
+                  <Draggable
+                    key={device.id}
+                    draggableId={`device-${device.id}`}
+                    index={index}
+                  >
+                    {(provided, snapshot) => (
+                      <ListItem
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        sx={{
+                          cursor: 'grab',
+                          bgcolor: snapshot.isDragging ? 'rgba(3, 169, 244, 0.1)' : 'transparent',
+                          border: snapshot.isDragging ? '2px dashed #03a9f4' : 'none',
+                          borderRadius: 1,
+                          '&:hover': {
+                            bgcolor: 'rgba(255,255,255,0.05)',
+                          },
+                        }}
+                      >
+                        <ListItemIcon sx={{ color: 'text.secondary' }}>
+                          {getDeviceIcon(device.type)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={device.name || device.id}
+                          primaryTypographyProps={{ color: 'text.primary' }}
+                          secondary={
+                            <Chip
+                              label={getDeviceTypeLabel(device.type)}
+                              size="small"
+                              variant="outlined"
+                              sx={{ 
+                                mt: 0.5,
+                                borderColor: 'divider',
+                                color: 'text.secondary'
+                              }}
+                            />
+                          }
+                        />
+                      </ListItem>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </List>
+            )}
+          </Droppable>
         )}
       </Box>
     </Paper>

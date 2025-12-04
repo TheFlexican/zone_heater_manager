@@ -1,6 +1,7 @@
 """Zone Manager for Smart Heating integration."""
 import logging
 from typing import Any
+from datetime import datetime, time
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
@@ -10,8 +11,8 @@ from .const import (
     ATTR_DEVICES,
     ATTR_ENABLED,
     ATTR_TARGET_TEMPERATURE,
-    ATTR_ZONE_ID,
-    ATTR_ZONE_NAME,
+    ATTR_AREA_ID,
+    ATTR_AREA_NAME,
     DEVICE_TYPE_OPENTHERM_GATEWAY,
     DEVICE_TYPE_TEMPERATURE_SENSOR,
     DEVICE_TYPE_THERMOSTAT,
@@ -24,6 +25,79 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class Schedule:
+    """Representation of a temperature schedule."""
+
+    def __init__(
+        self,
+        schedule_id: str,
+        time: str,
+        temperature: float,
+        days: list[str] | None = None,
+        enabled: bool = True,
+    ) -> None:
+        """Initialize a schedule.
+        
+        Args:
+            schedule_id: Unique identifier
+            time: Time in HH:MM format
+            temperature: Target temperature
+            days: Days of week (mon, tue, etc.) or None for all days
+            enabled: Whether schedule is active
+        """
+        self.schedule_id = schedule_id
+        self.time = time
+        self.temperature = temperature
+        self.days = days or ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+        self.enabled = enabled
+
+    def is_active(self, current_time: datetime) -> bool:
+        """Check if schedule is active at given time.
+        
+        Args:
+            current_time: Current datetime
+            
+        Returns:
+            True if schedule should be active
+        """
+        if not self.enabled:
+            return False
+        
+        # Check day of week
+        day_names = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+        current_day = day_names[current_time.weekday()]
+        if current_day not in self.days:
+            return False
+        
+        # Check time (within 30 minutes)
+        schedule_time = datetime.strptime(self.time, "%H:%M").time()
+        current_time_only = current_time.time()
+        
+        # Simple time comparison - schedule is active from its time until next schedule
+        return current_time_only >= schedule_time
+    
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "id": self.schedule_id,
+            "time": self.time,
+            "temperature": self.temperature,
+            "days": self.days,
+            "enabled": self.enabled,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Schedule":
+        """Create from dictionary."""
+        return cls(
+            schedule_id=data["id"],
+            time=data["time"],
+            temperature=data["temperature"],
+            days=data.get("days"),
+            enabled=data.get("enabled", True),
+        )
 
 
 class Area:
@@ -49,7 +123,10 @@ class Area:
         self.target_temperature = target_temperature
         self.enabled = enabled
         self.devices: dict[str, dict[str, Any]] = {}
+        self.schedules: dict[str, Schedule] = {}
         self._current_temperature: float | None = None
+        self.night_boost_enabled: bool = True
+        self.night_boost_offset: float = 0.5  # Add 0.5°C during night hours
 
     def add_device(self, device_id: str, device_type: str, mqtt_topic: str | None = None) -> None:
         """Add a device to the zone.
@@ -112,6 +189,80 @@ class Area:
             if device["type"] == DEVICE_TYPE_OPENTHERM_GATEWAY
         ]
 
+    def add_schedule(self, schedule: Schedule) -> None:
+        """Add a schedule to the area.
+        
+        Args:
+            schedule: Schedule instance
+        """
+        self.schedules[schedule.schedule_id] = schedule
+        _LOGGER.debug("Added schedule %s to area %s", schedule.schedule_id, self.area_id)
+
+    def remove_schedule(self, schedule_id: str) -> None:
+        """Remove a schedule from the area.
+        
+        Args:
+            schedule_id: Schedule identifier
+        """
+        if schedule_id in self.schedules:
+            del self.schedules[schedule_id]
+            _LOGGER.debug("Removed schedule %s from area %s", schedule_id, self.area_id)
+
+    def get_active_schedule_temperature(self, current_time: datetime | None = None) -> float | None:
+        """Get the temperature from the currently active schedule.
+        
+        Args:
+            current_time: Current time (defaults to now)
+            
+        Returns:
+            Temperature from active schedule or None
+        """
+        if current_time is None:
+            current_time = datetime.now()
+        
+        # Find all active schedules and get the latest one
+        active_schedules = [
+            s for s in self.schedules.values()
+            if s.is_active(current_time)
+        ]
+        
+        if not active_schedules:
+            return None
+        
+        # Sort by time and get the latest
+        active_schedules.sort(key=lambda s: s.time, reverse=True)
+        return active_schedules[0].temperature
+
+    def get_effective_target_temperature(self, current_time: datetime | None = None) -> float:
+        """Get the effective target temperature considering schedules and night boost.
+        
+        Args:
+            current_time: Current time (defaults to now)
+            
+        Returns:
+            Effective target temperature
+        """
+        if current_time is None:
+            current_time = datetime.now()
+        
+        # Start with schedule temperature if available
+        target = self.get_active_schedule_temperature(current_time)
+        if target is None:
+            target = self.target_temperature
+        
+        # Apply night boost if enabled (22:00 - 06:00)
+        if self.night_boost_enabled:
+            current_hour = current_time.hour
+            if current_hour >= 22 or current_hour < 6:
+                target += self.night_boost_offset
+                _LOGGER.debug(
+                    "Night boost active for area %s: %.1f°C + %.1f°C = %.1f°C",
+                    self.area_id, target - self.night_boost_offset, 
+                    self.night_boost_offset, target
+                )
+        
+        return target
+
     @property
     def current_temperature(self) -> float | None:
         """Get the current temperature of the zone.
@@ -153,15 +304,18 @@ class Area:
             Dictionary representation of the zone
         """
         return {
-            ATTR_ZONE_ID: self.area_id,
-            ATTR_ZONE_NAME: self.name,
+            ATTR_AREA_ID: self.area_id,
+            ATTR_AREA_NAME: self.name,
             ATTR_TARGET_TEMPERATURE: self.target_temperature,
             ATTR_ENABLED: self.enabled,
             ATTR_DEVICES: self.devices,
+            "schedules": [s.to_dict() for s in self.schedules.values()],
+            "night_boost_enabled": self.night_boost_enabled,
+            "night_boost_offset": self.night_boost_offset,
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Zone":
+    def from_dict(cls, data: dict[str, Any]) -> "Area":
         """Create a zone from dictionary.
         
         Args:
@@ -170,14 +324,22 @@ class Area:
         Returns:
             Zone instance
         """
-        zone = cls(
-            area_id=data[ATTR_ZONE_ID],
-            name=data[ATTR_ZONE_NAME],
+        area = cls(
+            area_id=data[ATTR_AREA_ID],
+            name=data[ATTR_AREA_NAME],
             target_temperature=data.get(ATTR_TARGET_TEMPERATURE, 20.0),
             enabled=data.get(ATTR_ENABLED, True),
         )
-        zone.devices = data.get(ATTR_DEVICES, {})
-        return zone
+        area.devices = data.get(ATTR_DEVICES, {})
+        area.night_boost_enabled = data.get("night_boost_enabled", True)
+        area.night_boost_offset = data.get("night_boost_offset", 0.5)
+        
+        # Load schedules
+        for schedule_data in data.get("schedules", []):
+            schedule = Schedule.from_dict(schedule_data)
+            area.schedules[schedule.schedule_id] = schedule
+        
+        return area
 
 
 class AreaManager:
@@ -196,25 +358,25 @@ class AreaManager:
 
     async def async_load(self) -> None:
         """Load zones from storage."""
-        _LOGGER.debug("Loading zones from storage")
+        _LOGGER.debug("Loading areas from storage")
         data = await self._store.async_load()
         
-        if data is not None and "zones" in data:
-            for zone_data in data["zones"]:
-                zone = Zone.from_dict(area_data)
-                self.zones[area.area_id] = zone
-            _LOGGER.info("Loaded %d zones from storage", len(self.zones))
+        if data is not None and "areas" in data:
+            for area_data in data["areas"]:
+                area = Area.from_dict(area_data)
+                self.zones[area.area_id] = area
+            _LOGGER.info("Loaded %d areas from storage", len(self.zones))
         else:
-            _LOGGER.debug("No zones found in storage")
+            _LOGGER.debug("No areas found in storage")
 
     async def async_save(self) -> None:
         """Save zones to storage."""
-        _LOGGER.debug("Saving zones to storage")
+        _LOGGER.debug("Saving areas to storage")
         data = {
-            "zones": [area.to_dict() for zone in self.zones.values()]
+            "areas": [area.to_dict() for area in self.zones.values()]
         }
         await self._store.async_save(data)
-        _LOGGER.info("Saved %d zones to storage", len(self.zones))
+        _LOGGER.info("Saved %d areas to storage", len(self.zones))
 
     def create_area(self, area_id: str, name: str, target_temperature: float = 20.0) -> Area:
         """Create a new zone.
@@ -231,12 +393,12 @@ class AreaManager:
             ValueError: If zone already exists
         """
         if area_id in self.zones:
-            raise ValueError(f"Zone {area_id} already exists")
+            raise ValueError(f"Area {area_id} already exists")
         
-        zone = Zone(area_id, name, target_temperature)
-        self.zones[area_id] = zone
-        _LOGGER.info("Created zone %s (%s)", area_id, name)
-        return zone
+        area = Area(area_id, name, target_temperature)
+        self.zones[area_id] = area
+        _LOGGER.info("Created area %s (%s)", area_id, name)
+        return area
 
     def delete_area(self, area_id: str) -> None:
         """Delete a zone.
@@ -290,11 +452,11 @@ class AreaManager:
         Raises:
             ValueError: If zone does not exist
         """
-        zone = self.get_zone(area_id)
-        if zone is None:
-            raise ValueError(f"Zone {area_id} does not exist")
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
         
-        zone.add_device(device_id, device_type, mqtt_topic)
+        area.add_device(device_id, device_type, mqtt_topic)
 
     def remove_device_from_area(self, area_id: str, device_id: str) -> None:
         """Remove a device from a zone.
@@ -306,11 +468,11 @@ class AreaManager:
         Raises:
             ValueError: If zone does not exist
         """
-        zone = self.get_zone(area_id)
-        if zone is None:
-            raise ValueError(f"Zone {area_id} does not exist")
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
         
-        zone.remove_device(device_id)
+        area.remove_device(device_id)
 
     def update_area_temperature(self, area_id: str, temperature: float) -> None:
         """Update the current temperature of a zone.
@@ -322,12 +484,12 @@ class AreaManager:
         Raises:
             ValueError: If zone does not exist
         """
-        zone = self.get_zone(area_id)
-        if zone is None:
-            raise ValueError(f"Zone {area_id} does not exist")
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
         
-        zone.current_temperature = temperature
-        _LOGGER.debug("Updated zone %s temperature to %.1f°C", area_id, temperature)
+        area.current_temperature = temperature
+        _LOGGER.debug("Updated area %s temperature to %.1f°C", area_id, temperature)
 
     def set_area_target_temperature(self, area_id: str, temperature: float) -> None:
         """Set the target temperature of a zone.
@@ -339,12 +501,12 @@ class AreaManager:
         Raises:
             ValueError: If zone does not exist
         """
-        zone = self.get_zone(area_id)
-        if zone is None:
-            raise ValueError(f"Zone {area_id} does not exist")
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
         
-        zone.target_temperature = temperature
-        _LOGGER.info("Set zone %s target temperature to %.1f°C", area_id, temperature)
+        area.target_temperature = temperature
+        _LOGGER.info("Set area %s target temperature to %.1f°C", area_id, temperature)
 
     def enable_area(self, area_id: str) -> None:
         """Enable a zone.
@@ -355,12 +517,12 @@ class AreaManager:
         Raises:
             ValueError: If zone does not exist
         """
-        zone = self.get_zone(area_id)
-        if zone is None:
-            raise ValueError(f"Zone {area_id} does not exist")
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
         
-        zone.enabled = True
-        _LOGGER.info("Enabled zone %s", area_id)
+        area.enabled = True
+        _LOGGER.info("Enabled area %s", area_id)
 
     def disable_area(self, area_id: str) -> None:
         """Disable a zone.
@@ -371,9 +533,59 @@ class AreaManager:
         Raises:
             ValueError: If zone does not exist
         """
-        zone = self.get_zone(area_id)
-        if zone is None:
-            raise ValueError(f"Zone {area_id} does not exist")
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
         
-        zone.enabled = False
+        area.enabled = False
+        _LOGGER.info("Disabled area %s", area_id)
+
+    def add_schedule_to_area(
+        self, 
+        area_id: str, 
+        schedule_id: str,
+        time: str,
+        temperature: float,
+        days: list[str] | None = None,
+    ) -> Schedule:
+        """Add a schedule to an area.
+        
+        Args:
+            area_id: Area identifier
+            schedule_id: Unique schedule identifier
+            time: Time in HH:MM format
+            temperature: Target temperature
+            days: Days of week or None for all days
+            
+        Returns:
+            Created schedule
+            
+        Raises:
+            ValueError: If area does not exist
+        """
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
+        
+        schedule = Schedule(schedule_id, time, temperature, days)
+        area.add_schedule(schedule)
+        _LOGGER.info("Added schedule %s to area %s", schedule_id, area_id)
+        return schedule
+
+    def remove_schedule_from_area(self, area_id: str, schedule_id: str) -> None:
+        """Remove a schedule from an area.
+        
+        Args:
+            area_id: Area identifier
+            schedule_id: Schedule identifier
+            
+        Raises:
+            ValueError: If area does not exist
+        """
+        area = self.get_area(area_id)
+        if area is None:
+            raise ValueError(f"Area {area_id} does not exist")
+        
+        area.remove_schedule(schedule_id)
+        _LOGGER.info("Removed schedule %s from area %s", schedule_id, area_id)
         _LOGGER.info("Disabled zone %s", area_id)

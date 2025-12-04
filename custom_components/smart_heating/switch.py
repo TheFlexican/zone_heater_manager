@@ -42,34 +42,34 @@ async def async_setup_entry(
     _LOGGER.info("Smart Heating switch platform setup complete with %d zones", len(entities))
 
 
-class ZoneSwitch(CoordinatorEntity, SwitchEntity):
+class AreaSwitch(CoordinatorEntity, SwitchEntity):
     """Representation of a Zone Switch."""
 
     def __init__(
         self,
         coordinator: SmartHeatingCoordinator,
         entry: ConfigEntry,
-        area: Zone,
+        area: Area,
     ) -> None:
         """Initialize the switch entity.
         
         Args:
             coordinator: The data update coordinator
             entry: Config entry
-            area: Zone instance
+            area: Area instance
         """
         super().__init__(coordinator)
         
-        self._zone = zone
+        self._area = zone
         
         # Entity attributes
-        self._attr_name = f"Zone {zone.name} Control"
-        self._attr_unique_id = f"{entry.entry_id}_switch_{zone.area_id}"
+        self._attr_name = f"Zone {area.name} Control"
+        self._attr_unique_id = f"{entry.entry_id}_switch_{area.area_id}"
         self._attr_icon = "mdi:radiator"
         
         _LOGGER.debug(
-            "ZoneSwitch initialized for zone %s with unique_id: %s",
-            zone.area_id,
+            "AreaSwitch initialized for zone %s with unique_id: %s",
+            area.area_id,
             self._attr_unique_id,
         )
 
@@ -80,7 +80,7 @@ class ZoneSwitch(CoordinatorEntity, SwitchEntity):
         Returns:
             True if zone is enabled
         """
-        return self._zone.enabled
+        return self._area.enabled
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the zone on.
@@ -88,9 +88,9 @@ class ZoneSwitch(CoordinatorEntity, SwitchEntity):
         Args:
             **kwargs: Additional keyword arguments
         """
-        _LOGGER.debug("Turning on zone %s", self._zone.area_id)
+        _LOGGER.debug("Turning on zone %s", self._area.area_id)
         
-        self.coordinator.area_manager.enable_area(self._zone.area_id)
+        self.coordinator.area_manager.enable_area(self._area.area_id)
         
         # Save to storage
         await self.coordinator.area_manager.async_save()
@@ -104,9 +104,9 @@ class ZoneSwitch(CoordinatorEntity, SwitchEntity):
         Args:
             **kwargs: Additional keyword arguments
         """
-        _LOGGER.debug("Turning off zone %s", self._zone.area_id)
+        _LOGGER.debug("Turning off zone %s", self._area.area_id)
         
-        self.coordinator.area_manager.disable_area(self._zone.area_id)
+        self.coordinator.area_manager.disable_area(self._area.area_id)
         
         # Save to storage
         await self.coordinator.area_manager.async_save()
@@ -122,12 +122,12 @@ class ZoneSwitch(CoordinatorEntity, SwitchEntity):
             Dictionary of additional attributes
         """
         return {
-            "area_id": self._zone.area_id,
-            "zone_name": self._zone.name,
-            "zone_state": self._zone.state,
-            "target_temperature": self._zone.target_temperature,
-            "current_temperature": self._zone.current_temperature,
-            "device_count": len(self._zone.devices),
+            "area_id": self._area.area_id,
+            "zone_name": self._area.name,
+            "zone_state": self._area.state,
+            "target_temperature": self._area.target_temperature,
+            "current_temperature": self._area.current_temperature,
+            "device_count": len(self._area.devices),
         }
 
     @property

@@ -4,17 +4,73 @@
   "key": "core.restore_state",
   "data": [
     {
-      "state": {"entity_id":"conversation.home_assistant","state":"unknown","attributes":{"friendly_name":"Home Assistant","supported_features":1},"last_changed":"2025-12-04T11:03:39.710324+00:00","last_reported":"2025-12-04T11:03:39.710324+00:00","last_updated":"2025-12-04T11:03:39.710324+00:00","context":{"id":"01KBMGGCDYCC0GPFJ2HCY5NWRQ","parent_id":null,"user_id":null}},
+      "state": {"entity_id":"conversation.home_assistant","state":"unknown","attributes":{"friendly_name":"Home Assistant","supported_features":1},"last_changed":"2025-12-04T13:39:10.429285+00:00","last_reported":"2025-12-04T13:39:10.429285+00:00","last_updated":"2025-12-04T13:39:10.429285+00:00","context":{"id":"01KBMSD4EXD49TF9H08EYRB8C8","parent_id":null,"user_id":null}},
       "extra_data": null,
-      "last_seen": "2025-12-04T11:03:40.528920+00:00"
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
     },
     {
-      "state": {"entity_id":"event.backup_automatic_backup","state":"unknown","attributes":{"event_types":["completed","failed","in_progress"],"event_type":null,"friendly_name":"Backup Automatic backup"},"last_changed":"2025-12-04T11:03:39.718813+00:00","last_reported":"2025-12-04T11:03:39.718813+00:00","last_updated":"2025-12-04T11:03:39.718813+00:00","context":{"id":"01KBMGGCE6KP6S8A9JXXD54P9G","parent_id":null,"user_id":null}},
+      "state": {"entity_id":"event.backup_automatic_backup","state":"unknown","attributes":{"event_types":["completed","failed","in_progress"],"event_type":null,"friendly_name":"Backup Automatic backup"},"last_changed":"2025-12-04T13:39:10.447938+00:00","last_reported":"2025-12-04T13:39:10.447938+00:00","last_updated":"2025-12-04T13:39:10.447938+00:00","context":{"id":"01KBMSD4FFDPZKP68QBAPHNR9Z","parent_id":null,"user_id":null}},
       "extra_data": {
         "last_event_type": null,
         "last_event_attributes": null
       },
-      "last_seen": "2025-12-04T11:03:40.528920+00:00"
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
+    },
+    {
+      "state": {"entity_id":"person.home","state":"unknown","attributes":{"editable":true,"id":"home","device_trackers":[],"source":"person.home","user_id":"c49b9e94174541f4998fe29e3f31813c","friendly_name":"home"},"last_changed":"2025-12-04T13:39:10.560640+00:00","last_reported":"2025-12-04T13:39:10.560640+00:00","last_updated":"2025-12-04T13:39:10.560640+00:00","context":{"id":"01KBMSD4K0NAPYFWDJKDQSKDWX","parent_id":null,"user_id":null}},
+      "extra_data": null,
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
+    },
+    {
+      "state": {"entity_id":"tts.google_translate_en_com","state":"unknown","attributes":{"friendly_name":"Google Translate en com"},"last_changed":"2025-12-04T13:39:10.700237+00:00","last_reported":"2025-12-04T13:39:10.700237+00:00","last_updated":"2025-12-04T13:39:10.700237+00:00","context":{"id":"01KBMSD4QCW9DDCA904D6XQ665","parent_id":null,"user_id":null}},
+      "extra_data": null,
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
+    },
+    {
+      "state": {"entity_id":"number.living_room_valve_position","state":"45","attributes":{"min":0.0,"max":100.0,"step":1.0,"mode":"auto","unit_of_measurement":"%","friendly_name":"Living Room Valve Position"},"last_changed":"2025-12-04T13:39:11.808104+00:00","last_reported":"2025-12-04T13:39:11.808104+00:00","last_updated":"2025-12-04T13:39:11.808104+00:00","context":{"id":"01KBMSD5T0ZHS237F7V0B7TS6F","parent_id":null,"user_id":null}},
+      "extra_data": {
+        "native_max_value": 100.0,
+        "native_min_value": 0.0,
+        "native_step": 1.0,
+        "native_unit_of_measurement": "%",
+        "native_value": 45
+      },
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
+    },
+    {
+      "state": {"entity_id":"number.bedroom_valve_position","state":"30","attributes":{"min":0.0,"max":100.0,"step":1.0,"mode":"auto","unit_of_measurement":"%","friendly_name":"Bedroom Valve Position"},"last_changed":"2025-12-04T13:39:11.808301+00:00","last_reported":"2025-12-04T13:39:11.808301+00:00","last_updated":"2025-12-04T13:39:11.808301+00:00","context":{"id":"01KBMSD5T0Z6JMKS0TFTNBKFYM","parent_id":null,"user_id":null}},
+      "extra_data": {
+        "native_max_value": 100.0,
+        "native_min_value": 0.0,
+        "native_step": 1.0,
+        "native_unit_of_measurement": "%",
+        "native_value": 30
+      },
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
+    },
+    {
+      "state": {"entity_id":"sensor.living_room_temperature","state":"67.1","attributes":{"unit_of_measurement":"°F","device_class":"temperature","friendly_name":"Living Room Temperature"},"last_changed":"2025-12-04T13:39:11.805888+00:00","last_reported":"2025-12-04T13:39:11.805888+00:00","last_updated":"2025-12-04T13:39:11.805888+00:00","context":{"id":"01KBMSD5SXHEVZMHVMWHSJBK0V","parent_id":null,"user_id":null}},
+      "extra_data": {
+        "native_value": "19.5",
+        "native_unit_of_measurement": "°C"
+      },
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
+    },
+    {
+      "state": {"entity_id":"sensor.kitchen_temperature","state":"68.9","attributes":{"unit_of_measurement":"°F","device_class":"temperature","friendly_name":"Kitchen Temperature"},"last_changed":"2025-12-04T13:39:11.806597+00:00","last_reported":"2025-12-04T13:39:11.806597+00:00","last_updated":"2025-12-04T13:39:11.806597+00:00","context":{"id":"01KBMSD5SY31FRNJB64MG7WQQH","parent_id":null,"user_id":null}},
+      "extra_data": {
+        "native_value": "20.5",
+        "native_unit_of_measurement": "°C"
+      },
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
+    },
+    {
+      "state": {"entity_id":"sensor.bedroom_temperature","state":"65.3","attributes":{"unit_of_measurement":"°F","device_class":"temperature","friendly_name":"Bedroom Temperature"},"last_changed":"2025-12-04T13:39:11.807725+00:00","last_reported":"2025-12-04T13:39:11.807725+00:00","last_updated":"2025-12-04T13:39:11.807725+00:00","context":{"id":"01KBMSD5SZHSQSETZR7900ZF16","parent_id":null,"user_id":null}},
+      "extra_data": {
+        "native_value": "18.5",
+        "native_unit_of_measurement": "°C"
+      },
+      "last_seen": "2025-12-04T13:39:15.592153+00:00"
     }
   ]
 }

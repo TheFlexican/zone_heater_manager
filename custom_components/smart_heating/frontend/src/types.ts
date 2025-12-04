@@ -5,7 +5,15 @@ export interface Device {
   name?: string
 }
 
-export interface Area {
+export interface ScheduleEntry {
+  id: string
+  day: string
+  start_time: string
+  end_time: string
+  temperature: number
+}
+
+export interface Zone {
   id: string
   name: string
   enabled: boolean
@@ -13,9 +21,14 @@ export interface Area {
   target_temperature: number
   current_temperature?: number
   devices: Device[]
+  schedules?: ScheduleEntry[]
 }
 
-export interface AreaCreate {
+// Alias Area to Zone for compatibility
+export type Area = Zone
+export type AreaCreate = ZoneCreate
+
+export interface ZoneCreate {
   zone_id: string
   zone_name: string
   temperature?: number
