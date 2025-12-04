@@ -3,6 +3,15 @@ export interface Device {
   type: 'thermostat' | 'temperature_sensor' | 'opentherm_gateway' | 'valve'
   mqtt_topic?: string
   name?: string
+  state?: string
+  // Thermostat specific
+  hvac_action?: string
+  current_temperature?: number
+  target_temperature?: number
+  // Temperature sensor specific
+  temperature?: number | string
+  // Valve specific
+  position?: number
 }
 
 export interface ScheduleEntry {

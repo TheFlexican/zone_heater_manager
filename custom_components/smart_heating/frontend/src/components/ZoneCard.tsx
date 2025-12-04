@@ -274,16 +274,30 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
                     <RemoveCircleOutlineIcon fontSize="small" />
                   </IconButton>
                 }
+                sx={{ py: 0.5 }}
               >
-                <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', minWidth: 24 }}>
                   {getDeviceStatusIcon(device)}
                 </Box>
                 <ListItemText
-                  primary={device.name || device.id}
-                  primaryTypographyProps={{ 
-                    variant: 'body2',
-                    color: 'text.primary'
-                  }}
+                  primary={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body2" color="text.primary">
+                        {device.name || device.id}
+                      </Typography>
+                      {device.type === 'thermostat' && device.hvac_action && (
+                        <Chip 
+                          label={device.hvac_action} 
+                          size="small" 
+                          sx={{ 
+                            height: 18, 
+                            fontSize: '0.65rem',
+                            bgcolor: device.hvac_action === 'heating' ? 'error.main' : 'info.main'
+                          }} 
+                        />
+                      )}
+                    </Box>
+                  }
                   secondary={getDeviceStatusText(device)}
                   secondaryTypographyProps={{
                     variant: 'caption',
