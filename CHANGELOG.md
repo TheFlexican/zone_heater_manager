@@ -7,6 +7,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### ✨ Added - Adaptive Learning System
+
+**Smart Night Boost with Machine Learning**
+- Adaptive learning engine that predicts optimal heating start times
+- Automatic tracking of every heating cycle with timestamps and temperatures
+- Weather correlation using outdoor temperature sensors
+- Predictive scheduling based on historical data and current conditions
+- Home Assistant Statistics API integration for efficient database storage
+- Learning statistics tracking:
+  - Heating rate (°C per minute)
+  - Cooldown rate
+  - Outdoor temperature correlation
+  - Prediction accuracy metrics
+- Configurable target wake-up time per area
+- 10-minute safety margin for predictions
+- Continuous learning improves accuracy over time
+
+**Frontend UI for Adaptive Learning**
+- New "Smart Night Boost" section in Settings tab:
+  - Toggle to enable/disable adaptive learning
+  - Time picker for target wake-up time
+  - Weather sensor entity selector
+  - Informational panel explaining how it works
+- New "Learning" tab (6th tab in AreaDetail):
+  - Learning status and current configuration
+  - Step-by-step learning process explanation
+  - API endpoint reference
+  - Placeholder when feature is disabled
+- Real-time service call integration
+- User-friendly configuration interface
+
+**API Enhancements**
+- New endpoint: `GET /api/smart_heating/areas/{area_id}/learning`
+  - Returns learning statistics for the area
+  - Includes total events, heating rates, correlations, accuracy
+- Extended `set_night_boost` service with new parameters:
+  - `smart_night_boost_enabled` - Enable adaptive learning
+  - `smart_night_boost_target_time` - Desired wake-up time
+  - `weather_entity_id` - Outdoor temperature sensor
+
+**Technical Implementation**
+- New `learning_engine.py` module (450+ lines):
+  - `HeatingEvent` class for tracking individual cycles
+  - `LearningEngine` class with HA Statistics API integration
+  - Automatic event recording on heating start/end
+  - Predictive algorithms using historical averages
+  - Weather correlation calculations
+- Climate controller integration:
+  - Tracks active heating events per area
+  - Records outdoor temperature with each event
+  - Automatic event lifecycle management
+- Scheduler integration:
+  - `_handle_smart_night_boost()` method
+  - Calculates optimal heating start time
+  - Safety margin implementation
+- Area model extensions:
+  - `smart_night_boost_enabled` field
+  - `smart_night_boost_target_time` field
+  - `weather_entity_id` field
+  - Persistent storage support
+
+### 🔧 Changed
+- Extended `Area` class with 3 new fields for smart learning
+- Enhanced `set_night_boost` service handler to accept learning parameters
+- Updated API responses to include smart night boost configuration
+- Climate controller now accepts optional learning engine parameter
+- Scheduler now accepts optional learning engine parameter
+- AreaDetail component now has 6 tabs (added Learning tab)
+
+### 📚 Documentation
+- Updated README with "Adaptive Learning System" section:
+  - How it works explanation
+  - Configuration examples
+  - Learning statistics API documentation
+- Updated service documentation with smart boost parameters
+- Updated frontend README with Learning tab information
+- Updated TypeScript type definitions with `LearningStats` interface
+- Added `getLearningStats()` API method documentation
+
+### 🏆 Performance
+- Efficient database storage via HA Statistics API
+- No file-based storage overhead for learning data
+- Minimal performance impact (predictions run once per minute)
+- Database queries optimized for historical data retrieval
+
+## [Unreleased]
+
 ### Planned
 - 🤖 AI-driven heating optimization
 - 📊 Advanced energy analytics and cost tracking

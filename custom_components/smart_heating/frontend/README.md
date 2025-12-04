@@ -57,7 +57,7 @@ npm run type-check
 
 **Main Pages:**
 - **App** - Main application with routing and drag-drop context
-- **AreaDetail** - Detailed area page with 5 tabs (Overview, Devices, Schedule, History, Settings)
+- **AreaDetail** - Detailed area page with 6 tabs (Overview, Devices, Schedule, History, Settings, Learning)
 
 **Components:**
 - **Header** - Top app bar with WebSocket connection status
@@ -82,15 +82,17 @@ The `src/api.ts` file contains all API interaction functions:
 - `enableZone()` / `disableZone()` - Control area state
 - `addDeviceToZone()` / `removeDeviceFromZone()` - Manage area devices
 - `getDevices()` - Fetch available Zigbee2MQTT devices
+- `getLearningStats()` - Get adaptive learning statistics for an area
 - Plus schedule, history, and service endpoints
 
 ### TypeScript Types
 
 See `src/types.ts` for all interface definitions:
-- `Zone` - Area configuration, state, schedules, night boost
+- `Zone` - Area configuration, state, schedules, night boost, smart learning
 - `Device` - Zigbee2MQTT device information
 - `ScheduleEntry` - Time-based schedule data
 - `HistoryEntry` - Temperature history record
+- `LearningStats` - Adaptive learning statistics
 
 ## Key Features
 
@@ -106,6 +108,18 @@ See `src/types.ts` for all interface definitions:
 - Adjustable offset (0-3°C)
 - Per-area enable/disable
 - Supports periods crossing midnight (e.g., 23:00-07:00)
+
+### Smart Night Boost (Adaptive Learning)
+- Machine learning system that predicts optimal heating start times
+- Learns heating patterns from historical data
+- Weather correlation with outdoor temperature sensors
+- Configurable target wake-up time
+- Automatic prediction improvement over time
+- Real-time learning statistics and progress tracking
+- Dedicated Learning tab showing:
+  - Learning status and configuration
+  - Learning process explanation
+  - API endpoint information
 
 ### Temperature History
 - Records every 5 minutes
