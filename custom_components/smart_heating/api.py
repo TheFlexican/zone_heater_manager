@@ -52,6 +52,11 @@ class SmartHeatingAPIView(HomeAssistantView):
                 return await self.get_devices(request)
             elif endpoint == "status":
                 return await self.get_status(request)
+            elif endpoint == "config":
+                return await self.get_config(request)
+            elif endpoint.startswith("entity_state/"):
+                entity_id = endpoint.replace("entity_state/", "")
+                return await self.get_entity_state(request, entity_id)
             elif endpoint.startswith("areas/") and "/history" in endpoint:
                 area_id = endpoint.split("/")[1]
                 return await self.get_history(request, area_id)
@@ -356,6 +361,49 @@ class SmartHeatingAPIView(HomeAssistantView):
         }
         
         return web.json_response(status)
+
+    async def get_config(self, request: web.Request) -> web.Response:
+        """Get system configuration.
+        
+        Args:
+            request: Request object
+            
+        Returns:
+            JSON response with configuration
+        """
+        config = {
+            "opentherm_gateway_id": self.area_manager.opentherm_gateway_id,
+            "opentherm_enabled": self.area_manager.opentherm_enabled,
+            "trv_heating_temp": self.area_manager.trv_heating_temp,
+            "trv_idle_temp": self.area_manager.trv_idle_temp,
+            "trv_temp_offset": self.area_manager.trv_temp_offset,
+        }
+        
+        return web.json_response(config)
+
+    async def get_entity_state(self, request: web.Request, entity_id: str) -> web.Response:
+        """Get entity state from Home Assistant.
+        
+        Args:
+            request: Request object
+            entity_id: Entity ID to fetch
+            
+        Returns:
+            JSON response with entity state
+        """
+        state = self.hass.states.get(entity_id)
+        
+        if not state:
+            return web.json_response(
+                {"error": f"Entity {entity_id} not found"}, status=404
+            )
+        
+        return web.json_response({
+            "state": state.state,
+            "attributes": dict(state.attributes),
+            "last_changed": state.last_changed.isoformat(),
+            "last_updated": state.last_updated.isoformat(),
+        })
 
     async def add_device(
         self, request: web.Request, area_id: str, data: dict

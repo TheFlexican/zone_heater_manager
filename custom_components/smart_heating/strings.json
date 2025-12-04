@@ -14,9 +14,16 @@
   "options": {
     "step": {
       "init": {
-        "title": "Zone Heater Manager Options",
-        "description": "Configure Zone Heater Manager options.",
-        "data": {}
+        "title": "Configure Smart Heating",
+        "description": "Configure the global OpenTherm gateway for boiler control across all areas.",
+        "data": {
+          "opentherm_gateway_id": "OpenTherm Gateway",
+          "opentherm_enabled": "Enable OpenTherm Control"
+        },
+        "data_description": {
+          "opentherm_gateway_id": "Select the climate entity that controls your OpenTherm gateway. Leave as 'None' to disable global boiler control.",
+          "opentherm_enabled": "Enable or disable OpenTherm gateway control. When disabled, the gateway will not be used even if selected."
+        }
       }
     }
   },

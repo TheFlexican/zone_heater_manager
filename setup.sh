@@ -435,11 +435,6 @@ echo ""
 # Step 10: Restart Home Assistant to discover devices
 echo -e "${YELLOW}[9/9]${NC} Restarting Home Assistant to discover devices..."
 
-# Clean up any existing Smart Heating config entries to allow fresh setup
-echo "  Removing old Smart Heating config entries..."
-docker exec "$HA_CONTAINER" rm -f /config/.storage/core.config_entries 2>/dev/null || true
-docker exec "$HA_CONTAINER" rm -f /config/.storage/smart_heating_* 2>/dev/null || true
-
 docker restart "$HA_CONTAINER" > /dev/null
 echo "  Waiting for restart (20 seconds)..."
 sleep 20

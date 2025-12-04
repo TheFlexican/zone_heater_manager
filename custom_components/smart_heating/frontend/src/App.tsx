@@ -6,9 +6,10 @@ import { DragDropContext, DropResult } from 'react-beautiful-dnd'
 import Header from './components/Header'
 import ZoneList from './components/ZoneList'
 import DevicePanel from './components/DevicePanel'
+import OpenThermStatus from './components/OpenThermStatus'
 import ZoneDetail from './pages/AreaDetail'
 import { Zone, Device } from './types'
-import { getZones, getDevices, addDeviceToZone } from './api'
+import { getZones, getDevices, addDeviceToZone, getConfig } from './api'
 import { useWebSocket } from './hooks/useWebSocket'
 
 // Home Assistant color scheme - matches HA's native dark theme
@@ -74,15 +75,26 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [wsConnected, setWsConnected] = useState(false)
   const [showConnectionAlert, setShowConnectionAlert] = useState(false)
+  const [openthermConfig, setOpenthermConfig] = useState<{
+    gateway_id?: string
+    enabled?: boolean
+  }>({})
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
-      const [areasData, devicesData] = await Promise.all([
+      const [areasData, devicesData, configData] = await Promise.all([
         getZones(),
-        getDevices()
+        getDevices(),
+        getConfig()
       ])
       setZones(areasData)
+      
+      // Store OpenTherm config
+      setOpenthermConfig({
+        gateway_id: configData.opentherm_gateway_id,
+        enabled: configData.opentherm_enabled
+      })
       
       // Filter out devices already assigned to areas
       const assignedDeviceIds = new Set(
@@ -194,6 +206,10 @@ function App() {
         <Header wsConnected={wsConnected} />
         <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <Box sx={{ flex: 1, overflow: 'auto', p: 3, bgcolor: 'background.default' }}>
+            <OpenThermStatus 
+              openthermGatewayId={openthermConfig.gateway_id}
+              enabled={openthermConfig.enabled}
+            />
             <ZoneList 
               areas={areas} 
               loading={loading}

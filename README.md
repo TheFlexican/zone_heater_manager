@@ -179,10 +179,27 @@ See [.devcontainer/README.md](.devcontainer/README.md) for detailed development 
 
 ## ⚙️ Setup
 
+### 1. Add the Integration
+
 1. Go to **Settings** → **Devices & Services**
 2. Click **+ ADD INTEGRATION**
 3. Search for **Smart Heating**
 4. Click on it to add (no configuration needed)
+
+### 2. Configure OpenTherm Gateway (Optional)
+
+If you have an OpenTherm gateway for boiler control:
+
+1. Go to **Settings** → **Devices & Services**
+2. Find the **Smart Heating** integration card
+3. Click the **gear icon (⚙️)** to open configuration
+4. Select your OpenTherm gateway from the dropdown
+5. Enable **OpenTherm Control**
+6. Click **Submit**
+
+**Note**: The OpenTherm dropdown only shows devices identified as OpenTherm gateways (entities containing "opentherm" or "otgw" in their name/ID, or with OpenTherm-specific attributes like `control_setpoint`).
+
+The system works perfectly without OpenTherm - this is only needed if you want centralized boiler control across all areas.
 
 ## 🎨 Web Interface
 
@@ -191,17 +208,38 @@ Once installed, the Smart Heating panel will automatically appear in your Home A
 You can also access it directly via:
 - **Direct URL**: `http://your-ha-instance:8123/smart_heating/`
 
-The web interface allows you to:
-- Create and delete areas
-- Set target temperatures with visual sliders (5-30°C)
-- Enable/disable areas with toggle switches
-- View available Zigbee2MQTT devices in the right panel
-- Drag and drop devices into areas
-- Monitor area states in real-time (heating/idle/off)
+### Overview Page Features
+
+The main overview page includes:
+
+- **OpenTherm Gateway Status** (top card, if configured)
+  - Real-time heating status with pulsing indicator when active
+  - Boiler water temperature
+  - Target setpoint temperature
+  - Current HVAC status (heating/idle)
+  - Flame status indicator
+  - Updates every 5 seconds
+  - Red border when actively heating
+
+- **Area Management** (main section)
+  - Create and delete areas
+  - Set target temperatures with visual sliders (5-30°C)
+  - Enable/disable areas with toggle switches
+  - Monitor area states in real-time (heating/idle/off)
+  - View current temperature and device count per area
+
+- **Device Panel** (right sidebar)
+  - View available Zigbee2MQTT devices
+  - Drag and drop devices into areas
+  - Real-time device discovery
+
+### Area Detail Page Features
+
+Click on any area to access:
 - **Manage Schedules** - Create time-based temperature profiles
 - **View History** - Interactive temperature charts with multiple time ranges
 - **Configure Settings** - Night boost, hysteresis, and advanced options
-- Real-time WebSocket updates for instant feedback
+- **Real-time Updates** - WebSocket connection for instant feedback
 
 ### Building the Frontend
 
@@ -532,12 +570,18 @@ entities:
 - **Coordinator** - Fetches device states from Home Assistant (30-second interval)
 - **History Tracker** - Records temperature data for visualization (5-minute intervals)
 - **REST API** - HTTP endpoints for frontend and external integrations
+  - `/api/smart_heating/areas` - Area management
+  - `/api/smart_heating/devices` - Device listing
+  - `/api/smart_heating/config` - System configuration (OpenTherm, TRV settings)
+  - `/api/smart_heating/status` - System status
 - **WebSocket** - Real-time updates for frontend
+- **Config Flow** - Integration setup with options flow for OpenTherm configuration
 
 ### Frontend (React + TypeScript + MUI)
 
 - **ZoneCard** - Area overview with device status and temperature control
 - **AreaDetail** - Detailed area view with tabs for overview, schedules, and history
+- **OpenThermStatus** - Real-time OpenTherm gateway monitoring with visual status indicators
 - **ScheduleManager** - Create and manage time-based temperature profiles
 - **TemperatureChart** - Interactive temperature history visualization
 - **DeviceList** - Drag-and-drop device assignment
@@ -569,8 +613,9 @@ logger:
 ```
 custom_components/smart_heating/
 ├── __init__.py          # Integration setup and services
+├── api.py               # REST API endpoints
 ├── climate.py           # Climate platform for areas
-├── config_flow.py       # UI configuration flow
+├── config_flow.py       # UI configuration flow with OpenTherm options
 ├── const.py             # Constants and configuration
 ├── coordinator.py       # Data update coordinator
 ├── manifest.json        # Integration metadata
@@ -578,7 +623,19 @@ custom_components/smart_heating/
 ├── services.yaml        # Service definitions
 ├── strings.json         # UI translations
 ├── switch.py            # Switch platform for area control
-└── area_manager.py      # Area management logic
+├── area_manager.py      # Area management logic
+├── websocket.py         # WebSocket handlers
+└── frontend/            # React frontend application
+    ├── src/
+    │   ├── components/
+    │   │   ├── OpenThermStatus.tsx  # OpenTherm gateway status card
+    │   │   ├── ZoneCard.tsx
+    │   │   ├── DevicePanel.tsx
+    │   │   └── ...
+    │   ├── pages/
+    │   │   └── AreaDetail.tsx
+    │   └── api.ts       # API client with config endpoint
+    └── dist/            # Built frontend assets
 ```
 
 ### Future Features (Roadmap)
@@ -603,6 +660,10 @@ Current version: **0.1.0**
 - ✨ Climate entities per area with full thermostat control
 - ✨ Switch entities for area enable/disable
 - ✨ Modern React-based web interface with drag-and-drop
+- ✨ **OpenTherm Gateway integration** with visual status monitoring
+  - Configuration UI in integration options (gear icon)
+  - Real-time status card on overview page
+  - Automatic filtering of OpenTherm-compatible devices
 - ✨ Schedule management (time-based temperature profiles)
 - ✨ Temperature history tracking with interactive charts
 - ✨ Real-time device status display in area cards
@@ -612,11 +673,14 @@ Current version: **0.1.0**
 - ✨ WebSocket support for real-time updates
 - ✨ REST API for full programmatic control
 - ✨ Zigbee2MQTT device support (thermostats, sensors, valves)
+- ✨ **Config flow with options** for OpenTherm gateway selection
 - 💾 Persistent storage of configuration and history
 - 🔧 MQTT dependency added
 - 🐛 Fixed schedule format compatibility between frontend and backend
 - 🐛 Fixed device status display (shows actual temperatures instead of type names)
 - 🐛 Fixed thermostat target sync when area is idle
+- 🐛 Fixed config flow panel registration errors
+- 🐛 Fixed "already_configured" issue with proper config entry cleanup
 
 #### v0.0.1 (Initial)
 - 🎉 Basic integration setup

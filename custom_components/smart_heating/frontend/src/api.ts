@@ -52,6 +52,16 @@ export const getStatus = async (): Promise<any> => {
   return response.data
 }
 
+export const getConfig = async (): Promise<any> => {
+  const response = await axios.get(`${API_BASE}/config`)
+  return response.data
+}
+
+export const getEntityState = async (entityId: string): Promise<any> => {
+  const response = await axios.get(`${API_BASE}/entity_state/${entityId}`)
+  return response.data
+}
+
 export const addScheduleToZone = async (
   areaId: string,
   schedule: Omit<ScheduleEntry, 'id'>

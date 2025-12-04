@@ -83,6 +83,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     area_manager = AreaManager(hass)
     await area_manager.async_load()
     
+    # Apply config entry options to area manager
+    if entry.options:
+        _LOGGER.debug("Loading config entry options: %s", entry.options)
+        if entry.options.get("opentherm_gateway_id"):
+            area_manager.set_opentherm_gateway(
+                entry.options["opentherm_gateway_id"],
+                enabled=entry.options.get("opentherm_enabled", True)
+            )
+            _LOGGER.info(
+                "Applied OpenTherm config from options: %s (enabled: %s)",
+                entry.options["opentherm_gateway_id"],
+                entry.options.get("opentherm_enabled", True)
+            )
+    
     # Create history tracker
     history_tracker = HistoryTracker(hass)
     await history_tracker.async_load()
@@ -156,7 +170,15 @@ async def async_register_panel(hass: HomeAssistant, entry: ConfigEntry) -> None:
         hass: Home Assistant instance
         entry: Config entry
     """
-    from homeassistant.components.frontend import async_register_built_in_panel
+    from homeassistant.components.frontend import async_register_built_in_panel, async_remove_panel
+    
+    # Remove panel if it already exists (from previous failed setup)
+    try:
+        async_remove_panel(hass, "smart_heating")  # Not actually async despite the name
+        _LOGGER.debug("Removed existing Smart Heating panel")
+    except (KeyError, ValueError):
+        # Panel doesn't exist, that's fine
+        pass
     
     # Register panel (this is a sync function despite the name)
     async_register_built_in_panel(
@@ -532,7 +554,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         
         # Remove sidebar panel
         try:
-            await hass.components.frontend.async_remove_panel("smart_heating")
+            from homeassistant.components.frontend import async_remove_panel
+            async_remove_panel(hass, "smart_heating")  # Not actually async despite the name
             _LOGGER.debug("Smart Heating panel removed from sidebar")
         except Exception as err:
             _LOGGER.warning("Failed to remove panel: %s", err)
