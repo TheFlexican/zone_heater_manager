@@ -25,14 +25,14 @@ import { Zone } from '../types'
 import { setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
 
 interface ZoneCardProps {
-  zone: Zone
+  area: Zone
   onUpdate: () => void
 }
 
-const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
+const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
   const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [temperature, setTemperature] = useState(zone.target_temperature)
+  const [temperature, setTemperature] = useState(area.target_temperature)
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation()
@@ -44,20 +44,20 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
   }
 
   const handleCardClick = () => {
-    navigate(`/zone/${zone.id}`)
+    navigate(`/area/${area.id}`)
   }
 
   const handleToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
     event.stopPropagation()
     try {
-      if (zone.enabled) {
-        await disableZone(zone.id)
+      if (area.enabled) {
+        await disableZone(area.id)
       } else {
-        await enableZone(zone.id)
+        await enableZone(area.id)
       }
       onUpdate()
     } catch (error) {
-      console.error('Failed to toggle zone:', error)
+      console.error('Failed to toggle area:', error)
     }
   }
 
@@ -70,7 +70,7 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
   const handleTemperatureCommit = async (event: Event | React.SyntheticEvent, value: number | number[]) => {
     event.stopPropagation()
     try {
-      await setZoneTemperature(zone.id, value as number)
+      await setZoneTemperature(area.id, value as number)
       onUpdate()
     } catch (error) {
       console.error('Failed to set temperature:', error)
@@ -79,7 +79,7 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
 
   const handleRemoveDevice = async (deviceId: string) => {
     try {
-      await removeDeviceFromZone(zone.id, deviceId)
+      await removeDeviceFromZone(area.id, deviceId)
       onUpdate()
     } catch (error) {
       console.error('Failed to remove device:', error)
@@ -91,7 +91,7 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
   }
 
   const getStateColor = () => {
-    switch (zone.state) {
+    switch (area.state) {
       case 'heating':
         return 'error'
       case 'idle':
@@ -104,7 +104,7 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
   }
 
   const getStateIcon = () => {
-    switch (zone.state) {
+    switch (area.state) {
       case 'heating':
         return <LocalFireDepartmentIcon />
       case 'idle':
@@ -117,7 +117,7 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
   }
 
   return (
-    <Droppable droppableId={`zone-${zone.id}`}>
+    <Droppable droppableId={`area-${area.id}`}>
       {(provided, snapshot) => (
         <Card 
           ref={provided.innerRef}
@@ -138,18 +138,18 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
           <Box>
             <Typography variant="h6" gutterBottom>
-              {zone.name}
+              {area.name}
             </Typography>
             <Chip
               icon={getStateIcon()}
-              label={zone.state.toUpperCase()}
+              label={area.state.toUpperCase()}
               color={getStateColor()}
               size="small"
             />
           </Box>
           <Box>
             <Switch
-              checked={zone.enabled}
+              checked={area.enabled}
               onChange={handleToggle}
               color="primary"
             />
@@ -180,32 +180,32 @@ const ZoneCard = ({ zone, onUpdate }: ZoneCardProps) => {
               { value: 30, label: '30°' }
             ]}
             valueLabelDisplay="auto"
-            disabled={!zone.enabled}
+            disabled={!area.enabled}
           />
         </Box>
 
-        {zone.current_temperature !== undefined && (
+        {area.current_temperature !== undefined && (
           <Box display="flex" justifyContent="space-between" mb={2}>
             <Typography variant="body2" color="text.secondary">
               Current Temperature
             </Typography>
             <Typography variant="body1">
-              {zone.current_temperature}°C
+              {area.current_temperature}°C
             </Typography>
           </Box>
         )}
 
-        <Box display="flex" alignItems="center" gap={1} mb={zone.devices.length > 0 ? 2 : 0}>
+        <Box display="flex" alignItems="center" gap={1} mb={area.devices.length > 0 ? 2 : 0}>
           <SensorsIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
-            {zone.devices.length} device(s)
+            {area.devices.length} device(s)
             {snapshot.isDraggingOver && ' - Drop here to add'}
           </Typography>
         </Box>
 
-        {zone.devices.length > 0 && (
+        {area.devices.length > 0 && (
           <List dense sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 1 }}>
-            {zone.devices.map((device) => (
+            {area.devices.map((device) => (
               <ListItem
                 key={device.id}
                 secondaryAction={

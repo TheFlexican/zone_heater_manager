@@ -48,18 +48,35 @@ The **Smart Heating** panel appears automatically in your Home Assistant sidebar
 
 Or navigate to: `http://your-ha-instance:8123/smart_heating/`
 
-## Create Your First Zone
+## Create Your First Area
 
-1. Click **+ Create Zone** in the web interface
-2. Enter zone name (e.g., "Living Room")
+1. Click **+ Create Area** in the web interface
+2. Enter area name (e.g., "Living Room")
 3. Set initial temperature
 4. Click **Create**
+
+## Set Up Your First Schedule
+
+1. Click on your area to open the detail page
+2. Navigate to the **Schedule** tab
+3. Click **+ Add Schedule**
+4. Set time (e.g., "07:00"), temperature (e.g., 21°C)
+5. Select days of week (optional)
+6. Click **Add**
+
+## Configure Night Boost (Optional)
+
+1. In area detail, go to **Settings** tab
+2. Toggle **Enable Night Boost**
+3. Adjust temperature offset (default: +0.5°C)
+4. Night boost activates 22:00-06:00 automatically
 
 ## Next Steps
 
 - Configure MQTT/Zigbee2MQTT for device discovery
-- Add devices to your areas
-- Create automations using the climate entities
+- Drag and drop devices to your areas
+- View temperature history in the **History** tab
+- Create automations using the climate entities and services
 - Explore the REST API for advanced integrations
 
 ## Need Help?
@@ -73,10 +90,15 @@ Or navigate to: `http://your-ha-instance:8123/smart_heating/`
 
 ✅ **Automatic Sidebar Panel** - No manual configuration needed
 ✅ **Modern Web UI** - React-based interface with Material Design
-✅ **Real-time Updates** - See changes instantly
+✅ **Real-time Updates** - WebSocket-powered instant feedback
+✅ **Smart Scheduling** - Time-based temperature profiles
+✅ **Night Boost** - Automatic temperature increase at night
+✅ **Temperature History** - Interactive charts (7-day retention)
+✅ **Drag & Drop** - Easy device assignment
+✅ **Advanced Settings** - Hysteresis, limits, fine-tuning
 ✅ **Temperature Sliders** - Visual control (5-30°C)
-✅ **Zone Management** - Create, delete, enable/disable areas
+✅ **Area Management** - Create, delete, enable/disable areas
 ✅ **Climate Entities** - Full Home Assistant integration
-✅ **Service Calls** - Automation-ready
+✅ **14 Service Calls** - Comprehensive automation API
 
 Happy heating! 🔥

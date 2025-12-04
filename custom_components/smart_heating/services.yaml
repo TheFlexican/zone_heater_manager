@@ -7,25 +7,25 @@ refresh:
 
 create_zone:
   name: Create Zone
-  description: Create a new heating zone
+  description: Create a new heating area
   fields:
     zone_id:
       name: Zone ID
-      description: Unique identifier for the zone
+      description: Unique identifier for the area
       required: true
       example: "living_room"
       selector:
         text:
     zone_name:
       name: Zone Name
-      description: Display name for the zone
+      description: Display name for the area
       required: true
       example: "Living Room"
       selector:
         text:
     temperature:
       name: Target Temperature
-      description: Initial target temperature for the zone (°C)
+      description: Initial target temperature for the area (°C)
       required: false
       default: 20.0
       example: 21.5
@@ -38,11 +38,11 @@ create_zone:
 
 delete_zone:
   name: Delete Zone
-  description: Delete an existing heating zone
+  description: Delete an existing heating area
   fields:
     zone_id:
       name: Zone ID
-      description: Identifier of the zone to delete
+      description: Identifier of the area to delete
       required: true
       example: "living_room"
       selector:
@@ -50,11 +50,11 @@ delete_zone:
 
 add_device_to_zone:
   name: Add Device to Zone
-  description: Add a Zigbee2MQTT device to a zone
+  description: Add a Zigbee2MQTT device to a area
   fields:
     zone_id:
       name: Zone ID
-      description: Identifier of the zone
+      description: Identifier of the area
       required: true
       example: "living_room"
       selector:
@@ -81,11 +81,11 @@ add_device_to_zone:
 
 remove_device_from_zone:
   name: Remove Device from Zone
-  description: Remove a device from a zone
+  description: Remove a device from a area
   fields:
     zone_id:
       name: Zone ID
-      description: Identifier of the zone
+      description: Identifier of the area
       required: true
       example: "living_room"
       selector:
@@ -100,11 +100,11 @@ remove_device_from_zone:
 
 set_zone_temperature:
   name: Set Zone Temperature
-  description: Set the target temperature for a zone
+  description: Set the target temperature for a area
   fields:
     zone_id:
       name: Zone ID
-      description: Identifier of the zone
+      description: Identifier of the area
       required: true
       example: "living_room"
       selector:
@@ -123,11 +123,11 @@ set_zone_temperature:
 
 enable_zone:
   name: Enable Zone
-  description: Enable heating for a zone
+  description: Enable heating for a area
   fields:
     zone_id:
       name: Zone ID
-      description: Identifier of the zone to enable
+      description: Identifier of the area to enable
       required: true
       example: "living_room"
       selector:
@@ -135,12 +135,175 @@ enable_zone:
 
 disable_zone:
   name: Disable Zone
-  description: Disable heating for a zone
+  description: Disable heating for a area
   fields:
     zone_id:
       name: Zone ID
-      description: Identifier of the zone to disable
+      description: Identifier of the area to disable
       required: true
       example: "living_room"
       selector:
         text:
+
+add_schedule:
+  name: Add Schedule
+  description: Add a temperature schedule to an area
+  fields:
+    zone_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    schedule_id:
+      name: Schedule ID
+      description: Unique identifier for the schedule
+      required: true
+      example: "morning_warmup"
+      selector:
+        text:
+    time:
+      name: Time
+      description: Time in HH:MM format when this temperature should be set
+      required: true
+      example: "07:00"
+      selector:
+        text:
+    temperature:
+      name: Temperature
+      description: Target temperature for this schedule (°C)
+      required: true
+      example: 21.5
+      selector:
+        number:
+          min: 5
+          max: 30
+          step: 0.5
+          unit_of_measurement: "°C"
+    days:
+      name: Days of Week
+      description: Days when schedule is active (optional, defaults to all days)
+      required: false
+      example: ["mon", "tue", "wed", "thu", "fri"]
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: "Monday"
+              value: "mon"
+            - label: "Tuesday"
+              value: "tue"
+            - label: "Wednesday"
+              value: "wed"
+            - label: "Thursday"
+              value: "thu"
+            - label: "Friday"
+              value: "fri"
+            - label: "Saturday"
+              value: "sat"
+            - label: "Sunday"
+              value: "sun"
+
+remove_schedule:
+  name: Remove Schedule
+  description: Remove a schedule from an area
+  fields:
+    zone_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    schedule_id:
+      name: Schedule ID
+      description: Identifier of the schedule to remove
+      required: true
+      example: "morning_warmup"
+      selector:
+        text:
+
+enable_schedule:
+  name: Enable Schedule
+  description: Enable a schedule for an area
+  fields:
+    zone_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    schedule_id:
+      name: Schedule ID
+      description: Identifier of the schedule to enable
+      required: true
+      example: "morning_warmup"
+      selector:
+        text:
+
+disable_schedule:
+  name: Disable Schedule
+  description: Disable a schedule for an area
+  fields:
+    zone_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    schedule_id:
+      name: Schedule ID
+      description: Identifier of the schedule to disable
+      required: true
+      example: "morning_warmup"
+      selector:
+        text:
+
+set_night_boost:
+  name: Set Night Boost
+  description: Configure night boost for an area (gradually increase temperature during night hours 22:00-06:00)
+  fields:
+    zone_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    night_boost_enabled:
+      name: Night Boost Enabled
+      description: Enable or disable night boost
+      required: false
+      example: true
+      selector:
+        boolean:
+    night_boost_offset:
+      name: Night Boost Offset
+      description: Temperature offset to add during night hours (°C)
+      required: false
+      example: 0.5
+      selector:
+        number:
+          min: 0
+          max: 3
+          step: 0.1
+          unit_of_measurement: "°C"
+
+set_hysteresis:
+  name: Set Hysteresis
+  description: Set the global temperature hysteresis for heating control
+  fields:
+    hysteresis:
+      name: Hysteresis
+      description: Temperature difference before heating turns on/off (°C)
+      required: true
+      example: 0.5
+      selector:
+        number:
+          min: 0.1
+          max: 2.0
+          step: 0.1
+          unit_of_measurement: "°C"

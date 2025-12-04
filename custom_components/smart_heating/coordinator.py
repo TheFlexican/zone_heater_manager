@@ -34,7 +34,7 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
         """Fetch data from the integration.
         
         This is the place to fetch and process the data from your source.
-        Updates zone temperatures from MQTT devices.
+        Updates area temperatures from MQTT devices.
         
         Returns:
             dict: Dictionary containing the current state
@@ -45,19 +45,19 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
         try:
             _LOGGER.debug("Updating Smart Heating data")
             
-            # Get all zones
+            # Get all areas
             areas = self.area_manager.get_all_areas()
             
             # Build data structure
             data = {
                 "status": STATE_INITIALIZED,
                 "zone_count": len(areas),
-                "zones": {},
+                "areas": {},
             }
             
-            # Add zone information
+            # Add area information
             for area_id, area in areas.items():
-                data["zones"][area_id] = {
+                data["areas"][area_id] = {
                     "name": area.name,
                     "enabled": area.enabled,
                     "state": area.state,
@@ -66,7 +66,7 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
                     "device_count": len(area.devices),
                 }
             
-            _LOGGER.debug("Smart Heating data updated successfully: %d zones", len(areas))
+            _LOGGER.debug("Smart Heating data updated successfully: %d areas", len(areas))
             return data
             
         except Exception as err:

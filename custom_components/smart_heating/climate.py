@@ -37,14 +37,14 @@ async def async_setup_entry(
     coordinator: SmartHeatingCoordinator = hass.data[DOMAIN][entry.entry_id]
     area_manager = coordinator.area_manager
     
-    # Create climate entities for each zone
+    # Create climate entities for each area
     entities = []
     for area_id, area in area_manager.get_all_areas().items():
         entities.append(AreaClimate(coordinator, entry, area))
     
     # Add entities
     async_add_entities(entities)
-    _LOGGER.info("Smart Heating climate platform setup complete with %d zones", len(entities))
+    _LOGGER.info("Smart Heating climate platform setup complete with %d areas", len(entities))
 
 
 class AreaClimate(CoordinatorEntity, ClimateEntity):
@@ -84,7 +84,7 @@ class AreaClimate(CoordinatorEntity, ClimateEntity):
         self._attr_icon = "mdi:thermostat"
         
         _LOGGER.debug(
-            "AreaClimate initialized for zone %s with unique_id: %s",
+            "AreaClimate initialized for area %s with unique_id: %s",
             area.area_id,
             self._attr_unique_id,
         )
@@ -128,9 +128,9 @@ class AreaClimate(CoordinatorEntity, ClimateEntity):
         if temperature is None:
             return
         
-        _LOGGER.debug("Setting zone %s temperature to %.1f°C", self._area.area_id, temperature)
+        _LOGGER.debug("Setting area %s temperature to %.1f°C", self._area.area_id, temperature)
         
-        # Update zone manager
+        # Update area manager
         self.coordinator.area_manager.set_area_target_temperature(
             self._area.area_id, temperature
         )
@@ -147,7 +147,7 @@ class AreaClimate(CoordinatorEntity, ClimateEntity):
         Args:
             hvac_mode: New HVAC mode
         """
-        _LOGGER.debug("Setting zone %s HVAC mode to %s", self._area.area_id, hvac_mode)
+        _LOGGER.debug("Setting area %s HVAC mode to %s", self._area.area_id, hvac_mode)
         
         if hvac_mode == HVACMode.HEAT:
             self.coordinator.area_manager.enable_area(self._area.area_id)

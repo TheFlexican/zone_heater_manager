@@ -36,6 +36,7 @@ class ClimateController:
         self.hass = hass
         self.area_manager = area_manager
         self._hysteresis = 0.5  # Temperature hysteresis in °C
+        self._record_counter = 0  # Counter for history recording
 
     async def async_update_area_temperatures(self) -> None:
         """Update current temperatures for all areas from sensors."""
@@ -69,10 +70,19 @@ class ClimateController:
 
     async def async_control_heating(self) -> None:
         """Control heating for all areas based on temperature and schedules."""
+        from .const import DOMAIN
+        
         current_time = datetime.now()
         
         # First update all temperatures
         await self.async_update_area_temperatures()
+        
+        # Increment counter for history recording (every 10 cycles = 5 minutes)
+        self._record_counter += 1
+        should_record_history = (self._record_counter % 10 == 0)
+        
+        # Get history tracker if available
+        history_tracker = self.hass.data.get(DOMAIN, {}).get("history")
         
         # Then control each area
         for area_id, area in self.area_manager.get_all_areas().items():
@@ -88,6 +98,12 @@ class ClimateController:
             if current_temp is None:
                 _LOGGER.warning("No temperature data for area %s", area_id)
                 continue
+            
+            # Record history (every 5 minutes)
+            if should_record_history and history_tracker:
+                await history_tracker.async_record_temperature(
+                    area_id, current_temp, target_temp, area.state
+                )
             
             # Determine if heating is needed (with hysteresis)
             should_heat = current_temp < (target_temp - self._hysteresis)
@@ -105,6 +121,10 @@ class ClimateController:
                     "Area %s: Heating OFF (current: %.1f°C, target: %.1f°C)",
                     area_id, current_temp, target_temp
                 )
+        
+        # Save history periodically (every 5 minutes)
+        if should_record_history and history_tracker:
+            await history_tracker.async_save()
 
     async def _async_set_area_heating(
         self, area: Area, heating: bool, target_temp: float | None = None

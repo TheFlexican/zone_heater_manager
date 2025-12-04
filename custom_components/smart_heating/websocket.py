@@ -29,7 +29,7 @@ def websocket_subscribe_updates(
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Subscribe to zone heater manager updates.
+    """Subscribe to area heater manager updates.
     
     Args:
         hass: Home Assistant instance
@@ -69,7 +69,7 @@ def websocket_get_zones(
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Get all zones via websocket.
+    """Get all areas via websocket.
     
     Args:
         hass: Home Assistant instance
@@ -80,28 +80,28 @@ def websocket_get_zones(
     coordinator: SmartHeatingCoordinator = hass.data[DOMAIN][entry_id]
     area_manager = coordinator.area_manager
     
-    zones = area_manager.get_all_areas()
+    areas = area_manager.get_all_areas()
     zones_data = []
     
-    for area_id, area in zones.items():
+    for area_id, area in areas.items():
         zones_data.append({
-            "id": zone.area_id,
-            "name": zone.name,
-            "enabled": zone.enabled,
-            "state": zone.state,
-            "target_temperature": zone.target_temperature,
-            "current_temperature": zone.current_temperature,
+            "id": area.area_id,
+            "name": area.name,
+            "enabled": area.enabled,
+            "state": area.state,
+            "target_temperature": area.target_temperature,
+            "current_temperature": area.current_temperature,
             "devices": [
                 {
                     "id": dev_id,
                     "type": dev_data["type"],
                     "mqtt_topic": dev_data.get("mqtt_topic"),
                 }
-                for dev_id, dev_data in zone.devices.items()
+                for dev_id, dev_data in area.devices.items()
             ],
         })
     
-    connection.send_result(msg["id"], {"zones": zones_data})
+    connection.send_result(msg["id"], {"areas": zones_data})
 
 
 @websocket_command({
@@ -116,7 +116,7 @@ def websocket_create_zone(
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Create a zone via websocket.
+    """Create a area via websocket.
     
     Args:
         hass: Home Assistant instance
@@ -128,7 +128,7 @@ def websocket_create_zone(
     area_manager = coordinator.area_manager
     
     try:
-        zone = area_manager.create_area(
+        area = area_manager.create_area(
             msg["area_id"],
             msg["zone_name"],
             msg.get("temperature", 20.0)
@@ -139,10 +139,10 @@ def websocket_create_zone(
         
         connection.send_result(msg["id"], {
             "success": True,
-            "zone": {
-                "id": zone.area_id,
-                "name": zone.name,
-                "target_temperature": zone.target_temperature,
+            "area": {
+                "id": area.area_id,
+                "name": area.name,
+                "target_temperature": area.target_temperature,
             }
         })
     except ValueError as err:

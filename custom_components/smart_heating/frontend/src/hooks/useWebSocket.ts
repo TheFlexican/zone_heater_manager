@@ -5,8 +5,8 @@ interface WebSocketMessage {
   type: string
   id?: number
   data?: {
-    zones?: Zone[]
-    zone?: Zone
+    areas?: Zone[]
+    area?: Zone
     zone_id?: string
   }
   error?: {
@@ -19,8 +19,8 @@ interface WebSocketMessage {
 }
 
 interface UseWebSocketOptions {
-  onZonesUpdate?: (zones: Zone[]) => void
-  onZoneUpdate?: (zone: Zone) => void
+  onZonesUpdate?: (areas: Zone[]) => void
+  onZoneUpdate?: (area: Zone) => void
   onZoneDelete?: (zoneId: string) => void
   onConnect?: () => void
   onDisconnect?: () => void
@@ -122,12 +122,12 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
           }
           
           if (message.type === 'event') {
-            // Handle our custom zone events
+            // Handle our custom area events
             const event = message.result || message
-            if (event.data?.zones) {
-              options.onZonesUpdate?.(event.data.zones)
-            } else if (event.data?.zone) {
-              options.onZoneUpdate?.(event.data.zone)
+            if (event.data?.areas) {
+              options.onZonesUpdate?.(event.data.areas)
+            } else if (event.data?.area) {
+              options.onZoneUpdate?.(event.data.area)
             } else if (event.data?.zone_id) {
               options.onZoneDelete?.(event.data.zone_id)
             }
@@ -137,14 +137,14 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
           // Legacy message handling (for backward compatibility)
           switch (message.type) {
             case 'zones_updated':
-              if (message.data?.zones) {
-                options.onZonesUpdate?.(message.data.zones)
+              if (message.data?.areas) {
+                options.onZonesUpdate?.(message.data.areas)
               }
               break
             
             case 'zone_updated':
-              if (message.data?.zone) {
-                options.onZoneUpdate?.(message.data.zone)
+              if (message.data?.area) {
+                options.onZoneUpdate?.(message.data.area)
               }
               break
             

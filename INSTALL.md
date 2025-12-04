@@ -77,12 +77,12 @@ Alternatively, navigate directly to: `http://your-ha-instance:8123/smart_heating
 
 ## Post-Installation
 
-### Create Your First Zone
+### Create Your First Area
 
 Via the Web Interface:
 1. Open the Smart Heating panel
-2. Click **+ Create Zone**
-3. Enter zone name (e.g., "Living Room")
+2. Click **+ Create Area**
+3. Enter area name (e.g., "Living Room")
 4. Set initial temperature
 5. Click **Create**
 
@@ -98,7 +98,7 @@ data:
 ### Add Devices to Zones
 
 1. Make sure Zigbee2MQTT is running and devices are paired
-2. In the web interface, drag devices from the right panel to zone cards
+2. In the web interface, drag devices from the right panel to area cards
 3. Or use service calls:
 
 ```yaml
@@ -175,7 +175,7 @@ automation:
    ```
 2. Check logs for detailed error messages
 3. Verify area_id and device_id values are correct
-4. Ensure zone exists before adding devices
+4. Ensure area exists before adding devices
 
 ### Build Script Fails
 

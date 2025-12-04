@@ -22,6 +22,8 @@ export interface Zone {
   current_temperature?: number
   devices: Device[]
   schedules?: ScheduleEntry[]
+  night_boost_enabled?: boolean
+  night_boost_offset?: number
 }
 
 // Alias Area to Zone for compatibility

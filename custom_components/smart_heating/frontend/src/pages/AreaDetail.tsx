@@ -28,6 +28,7 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import { Zone, Device } from '../types'
 import { getZones, getDevices, setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
+import HistoryChart from '../components/HistoryChart'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -42,8 +43,8 @@ function TabPanel(props: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`zone-tabpanel-${index}`}
-      aria-labelledby={`zone-tab-${index}`}
+      id={`area-tabpanel-${index}`}
+      aria-labelledby={`area-tab-${index}`}
       {...other}
     >
       {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
@@ -54,7 +55,7 @@ function TabPanel(props: TabPanelProps) {
 const ZoneDetail = () => {
   const { zoneId } = useParams<{ zoneId: string }>()
   const navigate = useNavigate()
-  const [zone, setZone] = useState<Zone | null>(null)
+  const [area, setZone] = useState<Zone | null>(null)
   const [availableDevices, setAvailableDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [tabValue, setTabValue] = useState(0)
@@ -83,7 +84,7 @@ const ZoneDetail = () => {
       setZone(currentZone)
       setTemperature(currentZone.target_temperature)
       
-      // Filter available devices (not assigned to any zone)
+      // Filter available devices (not assigned to any area)
       const assignedDeviceIds = new Set(
         zonesData.flatMap(z => z.devices.map(d => d.id))
       )
@@ -91,7 +92,7 @@ const ZoneDetail = () => {
         devicesData.filter(device => !assignedDeviceIds.has(device.id))
       )
     } catch (error) {
-      console.error('Failed to load zone:', error)
+      console.error('Failed to load area:', error)
     } finally {
       setLoading(false)
     }
@@ -102,17 +103,17 @@ const ZoneDetail = () => {
   }
 
   const handleToggle = async () => {
-    if (!zone) return
+    if (!area) return
     
     try {
-      if (zone.enabled) {
-        await disableZone(zone.id)
+      if (area.enabled) {
+        await disableZone(area.id)
       } else {
-        await enableZone(zone.id)
+        await enableZone(area.id)
       }
       await loadData()
     } catch (error) {
-      console.error('Failed to toggle zone:', error)
+      console.error('Failed to toggle area:', error)
     }
   }
 
@@ -121,10 +122,10 @@ const ZoneDetail = () => {
   }
 
   const handleTemperatureCommit = async (_event: Event | React.SyntheticEvent, value: number | number[]) => {
-    if (!zone) return
+    if (!area) return
     
     try {
-      await setZoneTemperature(zone.id, value as number)
+      await setZoneTemperature(area.id, value as number)
       await loadData()
     } catch (error) {
       console.error('Failed to set temperature:', error)
@@ -132,10 +133,10 @@ const ZoneDetail = () => {
   }
 
   const handleRemoveDevice = async (deviceId: string) => {
-    if (!zone) return
+    if (!area) return
     
     try {
-      await removeDeviceFromZone(zone.id, deviceId)
+      await removeDeviceFromZone(area.id, deviceId)
       await loadData()
     } catch (error) {
       console.error('Failed to remove device:', error)
@@ -178,7 +179,7 @@ const ZoneDetail = () => {
     )
   }
 
-  if (!zone) {
+  if (!area) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">Zone not found</Alert>
@@ -208,24 +209,24 @@ const ZoneDetail = () => {
             </IconButton>
             <Box>
               <Typography variant="h5" color="text.primary">
-                {zone.name}
+                {area.name}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
                 <Chip
-                  label={zone.state.toUpperCase()}
-                  color={getStateColor(zone.state)}
+                  label={area.state.toUpperCase()}
+                  color={getStateColor(area.state)}
                   size="small"
                 />
                 <Chip
-                  label={zone.enabled ? 'ENABLED' : 'DISABLED'}
-                  color={zone.enabled ? 'success' : 'default'}
+                  label={area.enabled ? 'ENABLED' : 'DISABLED'}
+                  color={area.enabled ? 'success' : 'default'}
                   size="small"
                 />
               </Box>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <Switch checked={zone.enabled} onChange={handleToggle} color="primary" />
+            <Switch checked={area.enabled} onChange={handleToggle} color="primary" />
           </Box>
         </Box>
       </Paper>
@@ -280,10 +281,10 @@ const ZoneDetail = () => {
                   { value: 30, label: '30°' }
                 ]}
                 valueLabelDisplay="auto"
-                disabled={!zone.enabled}
+                disabled={!area.enabled}
               />
 
-              {zone.current_temperature !== undefined && (
+              {area.current_temperature !== undefined && (
                 <>
                   <Divider sx={{ my: 3 }} />
                   <Box display="flex" justifyContent="space-between">
@@ -291,7 +292,7 @@ const ZoneDetail = () => {
                       Current Temperature
                     </Typography>
                     <Typography variant="h5" color="text.primary">
-                      {zone.current_temperature}°C
+                      {area.current_temperature}°C
                     </Typography>
                   </Box>
                 </>
@@ -306,19 +307,19 @@ const ZoneDetail = () => {
                 <ListItem>
                   <ListItemText
                     primary="Devices"
-                    secondary={`${zone.devices.length} device(s) assigned`}
+                    secondary={`${area.devices.length} device(s) assigned`}
                   />
                 </ListItem>
                 <ListItem>
                   <ListItemText
                     primary="Status"
-                    secondary={zone.state}
+                    secondary={area.state}
                   />
                 </ListItem>
                 <ListItem>
                   <ListItemText
                     primary="Zone ID"
-                    secondary={zone.id}
+                    secondary={area.id}
                   />
                 </ListItem>
               </List>
@@ -332,17 +333,17 @@ const ZoneDetail = () => {
             <Paper sx={{ p: 3, mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" color="text.primary">
-                  Assigned Devices ({zone.devices.length})
+                  Assigned Devices ({area.devices.length})
                 </Typography>
               </Box>
 
-              {zone.devices.length === 0 ? (
+              {area.devices.length === 0 ? (
                 <Alert severity="info">
-                  No devices assigned to this zone. Go back to the main view to drag and drop devices.
+                  No devices assigned to this area. Go back to the main view to drag and drop devices.
                 </Alert>
               ) : (
                 <List>
-                  {zone.devices.map((device) => (
+                  {area.devices.map((device) => (
                     <ListItem
                       key={device.id}
                       secondaryAction={
@@ -376,7 +377,7 @@ const ZoneDetail = () => {
                   Available Devices ({availableDevices.length})
                 </Typography>
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  To add devices, use the drag and drop feature on the main zones page.
+                  To add devices, use the drag and drop feature on the main areas page.
                 </Alert>
                 <List>
                   {availableDevices.slice(0, 5).map((device) => (
@@ -409,20 +410,24 @@ const ZoneDetail = () => {
         {/* Schedule Tab */}
         <TabPanel value={tabValue} index={2}>
           <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-            <ScheduleEditor zone={zone} onUpdate={loadData} />
+            <ScheduleEditor area={area} onUpdate={loadData} />
           </Box>
         </TabPanel>
 
         {/* History Tab */}
         <TabPanel value={tabValue} index={3}>
-          <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom color="text.primary">
-                Temperature History
+                Temperature History (Last 24 Hours)
               </Typography>
-              <Alert severity="info">
-                History charts coming soon! This will show temperature trends over time.
-              </Alert>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Track temperature trends over time to optimize your heating schedule.
+              </Typography>
+              
+              {area.id && (
+                <HistoryChart areaId={area.id} />
+              )}
             </Paper>
           </Box>
         </TabPanel>
@@ -430,13 +435,165 @@ const ZoneDetail = () => {
         {/* Settings Tab */}
         <TabPanel value={tabValue} index={4}>
           <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom color="text.primary">
+                Night Boost Settings
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Night boost gradually increases temperature during night hours (22:00-06:00) to ensure comfort in the morning.
+              </Typography>
+              
+              <Box sx={{ mt: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box>
+                    <Typography variant="body1" color="text.primary">
+                      Enable Night Boost
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Automatically add temperature offset during night hours
+                    </Typography>
+                  </Box>
+                  <Switch
+                    checked={area.night_boost_enabled ?? true}
+                    onChange={async (e) => {
+                      try {
+                        await fetch('/api/smart_heating/call_service', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            service: 'set_night_boost',
+                            area_id: area.id,
+                            night_boost_enabled: e.target.checked
+                          })
+                        })
+                        loadData()
+                      } catch (error) {
+                        console.error('Failed to update night boost:', error)
+                      }
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Night Boost Temperature Offset
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Slider
+                      value={area.night_boost_offset ?? 0.5}
+                      onChange={async (e, value) => {
+                        try {
+                          await fetch('/api/smart_heating/call_service', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              service: 'set_night_boost',
+                              area_id: area.id,
+                              night_boost_offset: value
+                            })
+                          })
+                          loadData()
+                        } catch (error) {
+                          console.error('Failed to update night boost offset:', error)
+                        }
+                      }}
+                      min={0}
+                      max={3}
+                      step={0.1}
+                      marks={[
+                        { value: 0, label: '0°C' },
+                        { value: 1.5, label: '1.5°C' },
+                        { value: 3, label: '3°C' }
+                      ]}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={(value) => `+${value}°C`}
+                      disabled={!area.night_boost_enabled}
+                      sx={{ flexGrow: 1 }}
+                    />
+                    <Typography variant="h6" color="primary" sx={{ minWidth: 60 }}>
+                      +{area.night_boost_offset ?? 0.5}°C
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Paper>
+
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom color="text.primary">
-                Advanced Settings
+                Heating Control Settings
               </Typography>
-              <Alert severity="info">
-                Advanced settings coming soon! This will include hysteresis, min/max limits, and more.
-              </Alert>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Configure how the heating system responds to temperature changes.
+              </Typography>
+              
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Temperature Hysteresis
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                  Hysteresis prevents rapid on/off cycling. Heating turns on when temperature is below (target - hysteresis) and off when it reaches target.
+                </Typography>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Global hysteresis setting affects all areas. Current value: 0.5°C
+                </Alert>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Slider
+                    defaultValue={0.5}
+                    onChange={async (e, value) => {
+                      try {
+                        await fetch('/api/smart_heating/call_service', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            service: 'set_hysteresis',
+                            hysteresis: value
+                          })
+                        })
+                      } catch (error) {
+                        console.error('Failed to update hysteresis:', error)
+                      }
+                    }}
+                    min={0.1}
+                    max={2.0}
+                    step={0.1}
+                    marks={[
+                      { value: 0.1, label: '0.1°C' },
+                      { value: 1.0, label: '1.0°C' },
+                      { value: 2.0, label: '2.0°C' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(value) => `${value}°C`}
+                    sx={{ flexGrow: 1 }}
+                  />
+                </Box>
+              </Box>
+
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Temperature Limits
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                  Minimum and maximum temperature limits for this area
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 3 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Minimum Temperature
+                    </Typography>
+                    <Typography variant="h4" color="text.primary">
+                      5°C
+                    </Typography>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Maximum Temperature
+                    </Typography>
+                    <Typography variant="h4" color="text.primary">
+                      30°C
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
             </Paper>
           </Box>
         </TabPanel>

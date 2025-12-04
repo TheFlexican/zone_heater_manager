@@ -11,7 +11,7 @@ Smart Heating is a Home Assistant integration with a modern web-based interface 
 │  │         Smart Heating Integration               │ │
 │  │                                                         │ │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐ │ │
-│  │  │ Zone Manager │  │ Coordinator  │  │  Platforms  │ │ │
+│  │  │ Area Manager │  │ Coordinator  │  │  Platforms  │ │ │
 │  │  │   (Storage)  │  │  (30s poll)  │  │ (Entities)  │ │ │
 │  │  └──────┬───────┘  └──────┬───────┘  └─────────────┘ │ │
 │  │         │                  │                           │ │
@@ -36,7 +36,7 @@ Smart Heating is a Home Assistant integration with a modern web-based interface 
              ┌──────────────────────────────┐
              │     React Frontend (SPA)     │
              │                              │
-             │  - Zone Management UI        │
+             │  - Area Management UI        │
              │  - Device Panel              │
              │  - Real-time Updates         │
              │  - Material-UI Components    │
@@ -56,44 +56,127 @@ Smart Heating is a Home Assistant integration with a modern web-based interface 
 
 ## Backend Components
 
-### 1. Zone Manager (`area_manager.py`)
+### 1. Area Manager (`area_manager.py`)
 
 Core business logic for managing heating areas.
 
 **Responsibilities:**
-- Zone CRUD operations
+- Area CRUD operations
 - Device assignment to areas
-- Temperature control
-- Zone enable/disable
+- Schedule management (Schedule class)
+- Night boost configuration per area
+- Temperature control and effective target calculation
+- Area enable/disable
 - Persistent storage (via HA storage API)
 
 **Data Model:**
 ```python
-Zone:
-  - id: str
+Area:
+  - area_id: str
   - name: str
   - target_temperature: float
   - enabled: bool
-  - devices: List[Device]
+  - devices: Dict[str, Device]
+  - schedules: Dict[str, Schedule]
   - state: ZoneState (heating/idle/off)
+  - night_boost_enabled: bool
+  - night_boost_offset: float
+  - current_temperature: Optional[float]
+
+Schedule:
+  - schedule_id: str
+  - time: str (HH:MM)
+  - temperature: float
+  - days: List[str] (mon, tue, etc.)
+  - enabled: bool
 
 Device:
   - id: str
-  - name: str
-  - type: str (thermostat/sensor/gateway/valve)
-  - area_id: Optional[str]
+  - type: str (thermostat/temperature_sensor/opentherm_gateway/valve)
+  - mqtt_topic: Optional[str]
+  - entity_id: Optional[str]
 ```
+
+**Key Methods:**
+- `get_effective_target_temperature()` - Calculates target with schedules + night boost
+- `get_active_schedule_temperature()` - Finds current active schedule
+- `add_schedule()` / `remove_schedule()` - Schedule management
 
 ### 2. Coordinator (`coordinator.py`)
 
 Data update coordinator using Home Assistant's `DataUpdateCoordinator`.
 
 **Responsibilities:**
-- Fetch zone data every 30 seconds
+- Fetch area data every 30 seconds
 - Broadcast updates to entities
 - Handle refresh requests
 
-### 3. Platforms
+### 3. Climate Controller (`climate_controller.py`)
+
+Automated heating control engine.
+
+**Responsibilities:**
+- Runs every 30 seconds (via async_track_time_interval)
+- Updates area temperatures from sensors
+- Controls heating based on hysteresis logic
+- Records temperature history every 5 minutes (10 cycles)
+- Integrates with AreaManager for effective target temperature
+
+**Logic:**
+```python
+# Hysteresis control (default 0.5°C)
+should_heat = current_temp < (target_temp - hysteresis)
+should_stop = current_temp >= target_temp
+
+# Target includes schedules + night boost
+target_temp = area.get_effective_target_temperature()
+```
+
+### 4. Schedule Executor (`scheduler.py`)
+
+Time-based temperature control.
+
+**Responsibilities:**
+- Runs every 1 minute (via async_track_time_interval)
+- Checks all active schedules for current day/time
+- Applies temperature changes when schedules activate
+- Handles midnight-crossing schedules
+- Prevents duplicate temperature sets (tracks last applied)
+
+**Schedule Matching:**
+- Day-of-week checking (mon, tue, wed, thu, fri, sat, sun)
+- Time range validation (handles 22:00-06:00 crossing midnight)
+- Priority: Latest schedule time wins
+
+### 5. History Tracker (`history.py`)
+
+Temperature logging and retention.
+
+**Responsibilities:**
+- Records temperature every 5 minutes
+- Stores: current_temp, target_temp, state, timestamp
+- 7-day automatic retention
+- Persistent storage in `.storage/smart_heating_history`
+- Automatic cleanup of old entries
+- 1000 entry limit per area
+
+**Storage:**
+```json
+{
+  "history": {
+    "living_room": [
+      {
+        "timestamp": "2025-12-04T10:00:00",
+        "current_temperature": 20.5,
+        "target_temperature": 21.0,
+        "state": "heating"
+      }
+    ]
+  }
+}
+```
+
+### 6. Platforms
 
 #### Climate Platform (`climate.py`)
 Creates one `climate.area_<name>` entity per area.
@@ -101,8 +184,8 @@ Creates one `climate.area_<name>` entity per area.
 **Features:**
 - HVAC modes: HEAT, OFF
 - Temperature control (5-30°C, 0.5° steps)
-- Current zone state
-- Zone attributes (devices, enabled)
+- Current area state
+- Area attributes (devices, enabled)
 
 #### Switch Platform (`switch.py`)
 Creates one `switch.area_<name>_control` entity per area.
@@ -116,10 +199,10 @@ Creates `sensor.smart_heating_status` entity.
 
 **Features:**
 - Overall system status
-- Zone count
+- Area count
 - Active areas count
 
-### 4. REST API (`api.py`)
+### 7. REST API (`api.py`)
 
 HTTP API using `HomeAssistantView` for frontend communication.
 
@@ -127,77 +210,134 @@ HTTP API using `HomeAssistantView` for frontend communication.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/smart_heating/zones` | Get all areas |
-| GET | `/api/smart_heating/zones/{id}` | Get specific zone |
-| POST | `/api/smart_heating/zones` | Create zone |
-| DELETE | `/api/smart_heating/zones/{id}` | Delete zone |
-| POST | `/api/smart_heating/zones/{id}/devices` | Add device to zone |
-| DELETE | `/api/smart_heating/zones/{id}/devices/{device_id}` | Remove device |
-| POST | `/api/smart_heating/zones/{id}/temperature` | Set temperature |
-| POST | `/api/smart_heating/zones/{id}/enable` | Enable zone |
-| POST | `/api/smart_heating/zones/{id}/disable` | Disable zone |
+| GET | `/api/smart_heating/areas` | Get all areas with night boost data |
+| GET | `/api/smart_heating/areas/{id}` | Get specific area |
+| POST | `/api/smart_heating/areas` | Create area |
+| DELETE | `/api/smart_heating/areas/{id}` | Delete area |
+| POST | `/api/smart_heating/areas/{id}/devices` | Add device to area |
+| DELETE | `/api/smart_heating/areas/{id}/devices/{device_id}` | Remove device |
+| POST | `/api/smart_heating/areas/{id}/schedules` | Add schedule to area |
+| DELETE | `/api/smart_heating/areas/{id}/schedules/{schedule_id}` | Remove schedule |
+| POST | `/api/smart_heating/areas/{id}/temperature` | Set temperature |
+| POST | `/api/smart_heating/areas/{id}/enable` | Enable area |
+| POST | `/api/smart_heating/areas/{id}/disable` | Disable area |
+| GET | `/api/smart_heating/areas/{id}/history?hours=24` | Get temperature history |
 | GET | `/api/smart_heating/devices` | Get available devices |
 | GET | `/api/smart_heating/status` | Get system status |
+| POST | `/api/smart_heating/call_service` | Call HA service (proxy) |
 
-### 5. WebSocket API (`websocket.py`)
+### 8. WebSocket API (`websocket.py`)
 
 Real-time communication using HA WebSocket API.
 
 **Commands:**
-- `smart_heating/subscribe_updates` - Subscribe to zone updates
+- `smart_heating/subscribe_updates` - Subscribe to area updates
 - `smart_heating/get_zones` - Get areas via WebSocket
-- `smart_heating/create_zone` - Create zone via WebSocket
+- `smart_heating/create_zone` - Create area via WebSocket
 
-### 6. Service Calls
+### 9. Service Calls
 
-Eight service calls for automation/script integration:
+Comprehensive service API for automation/script integration:
 
-1. `smart_heating.create_zone`
-2. `smart_heating.delete_zone`
-3. `smart_heating.add_device_to_zone`
-4. `smart_heating.remove_device_from_zone`
-5. `smart_heating.set_area_temperature`
-6. `smart_heating.enable_zone`
-7. `smart_heating.disable_zone`
-8. `smart_heating.refresh`
+**Area Management:**
+1. `smart_heating.create_area` - Create new area
+2. `smart_heating.delete_area` - Delete area
+3. `smart_heating.enable_area` - Enable area
+4. `smart_heating.disable_area` - Disable area
+5. `smart_heating.set_area_temperature` - Set target temperature
+
+**Device Management:**
+6. `smart_heating.add_device_to_area` - Add device to area
+7. `smart_heating.remove_device_from_area` - Remove device
+
+**Schedule Management:**
+8. `smart_heating.add_schedule` - Add time-based schedule
+9. `smart_heating.remove_schedule` - Remove schedule
+10. `smart_heating.enable_schedule` - Enable schedule
+11. `smart_heating.disable_schedule` - Disable schedule
+
+**Advanced Settings:**
+12. `smart_heating.set_night_boost` - Configure night boost
+13. `smart_heating.set_hysteresis` - Set global hysteresis
+
+**System:**
+14. `smart_heating.refresh` - Manual refresh
 
 ## Frontend Components
 
 ### Technology Stack
 
-- **React 18.2** - UI library
+- **React 18.3** - UI library
 - **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Material-UI (MUI) v5** - Component library
-- **Axios** - HTTP client
-- **react-beautiful-dnd** - Drag and drop (planned)
-- **Recharts** - Analytics charts (planned)
+- **Vite 6** - Build tool and dev server
+- **Material-UI (MUI) v6** - Component library
+- **react-router-dom** - Client-side routing
+- **react-beautiful-dnd** - Drag and drop device assignment
+- **Recharts** - Interactive temperature charts
+- **WebSocket** - Real-time updates via custom hook
 
 ### Component Structure
 
 ```
 src/
-├── main.tsx              # Entry point
-├── App.tsx               # Main application
-├── types.ts              # TypeScript interfaces
-├── api.ts                # API client functions
-├── index.css             # Global styles
-└── components/
-    ├── Header.tsx        # App header with branding
-    ├── ZoneList.tsx      # Zone grid display
-    ├── ZoneCard.tsx      # Individual zone control
-    ├── CreateZoneDialog.tsx  # Zone creation dialog
-    └── DevicePanel.tsx   # Available devices sidebar
+├── main.tsx                    # Entry point
+├── App.tsx                     # Main application with routing
+├── types.ts                    # TypeScript interfaces
+├── api.ts                      # API client functions
+├── index.css                   # Global styles
+├── components/
+│   ├── Header.tsx              # App header with connection status
+│   ├── ZoneList.tsx            # Area grid with drag-drop context
+│   ├── ZoneCard.tsx            # Individual area control card
+│   ├── CreateZoneDialog.tsx    # Area creation dialog
+│   ├── DevicePanel.tsx         # Draggable devices sidebar
+│   ├── ScheduleEditor.tsx      # Schedule management UI
+│   └── HistoryChart.tsx        # Temperature history visualization
+├── pages/
+│   └── AreaDetail.tsx          # Detailed area page (5 tabs)
+└── hooks/
+    └── useWebSocket.ts         # WebSocket connection hook
 ```
 
 ### Key Features
 
 **ZoneCard Component:**
-- Temperature slider (5-30°C)
+- Temperature slider (5-30°C, 0.5° steps)
 - Enable/disable toggle
-- State indicator (heating/idle/off)
-- Delete zone action
-- Device list
+- State indicator with color coding (heating/idle/off)
+- Device list with remove buttons
+- Drag-drop target for device assignment
+- Click to navigate to detail page
+
+**AreaDetail Page (5 Tabs):**
+1. **Overview** - Temperature control, current state, device management
+2. **Devices** - Detailed device list and assignment
+3. **Schedule** - Time-based schedule editor
+4. **History** - Interactive temperature charts (6h-7d ranges)
+5. **Settings** - Night boost, hysteresis, advanced configuration
+
+**ScheduleEditor Component:**
+- Time picker for schedule start
+- Temperature input
+- Day-of-week multi-select
+- Add/remove schedules
+- Enable/disable individual schedules
+- Visual schedule list with current status
+
+**HistoryChart Component:**
+- Recharts line chart
+- Blue line: Current temperature
+- Yellow dashed: Target temperature
+- Red dots: Heating active periods
+- Time range selector (6h, 12h, 24h, 3d, 7d)
+- Auto-refresh every 5 minutes
+- Responsive design
+
+**DevicePanel Component:**
+- List of available Zigbee2MQTT devices
+- Draggable device cards
+- Filter by device type
+- Real-time availability updates
 
 **DevicePanel Component:**
 - Lists available Zigbee2MQTT devices
@@ -206,7 +346,7 @@ src/
 - Device type icons
 
 **CreateZoneDialog Component:**
-- Zone name input
+- Area name input
 - Auto-generated area_id
 - Initial temperature setting
 - Form validation
@@ -219,7 +359,7 @@ All API calls go through `src/api.ts`:
 // Get areas
 const areas = await getZones()
 
-// Create zone
+// Create area
 await createZone('living_room', 'Living Room', 21.0)
 
 // Set temperature
@@ -232,33 +372,33 @@ await addDeviceToZone('living_room', 'device_id')
 ### Real-time Updates (Planned)
 
 WebSocket connection for live updates:
-- Zone state changes
+- Area state changes
 - Temperature updates
 - Device additions/removals
 - System status
 
 ## Data Flow
 
-### Zone Creation Flow
+### Area Creation Flow
 
 ```
-User clicks "Create Zone"
+User clicks "Create Area"
     ↓
 CreateZoneDialog collects input
     ↓
-api.createZone() calls POST /api/smart_heating/zones
+api.createZone() calls POST /api/smart_heating/areas
     ↓
 ZoneHeaterAPIView.post() in api.py
     ↓
 area_manager.async_create_zone()
     ↓
-Zone saved to storage
+Area saved to storage
     ↓
 Coordinator refresh triggered
     ↓
 Climate/Switch entities created
     ↓
-Frontend refreshes zone list
+Frontend refreshes area list
 ```
 
 ### Temperature Control Flow
@@ -274,7 +414,7 @@ ZoneHeaterAPIView.post() routes to set_temperature()
     ↓
 area_manager.async_set_area_temperature()
     ↓
-Zone updated in storage
+Area updated in storage
     ↓
 Climate entity receives update
     ↓
@@ -294,7 +434,7 @@ Zones and configuration are stored using Home Assistant's storage API:
 {
   "version": 1,
   "data": {
-    "zones": [
+    "areas": [
       {
         "id": "living_room",
         "name": "Living Room",
@@ -371,7 +511,7 @@ Example:
 ## Future Enhancements
 
 - [ ] Drag-and-drop device assignment
-- [ ] Zone scheduling/programs
+- [ ] Area scheduling/programs
 - [ ] Analytics dashboard
 - [ ] Smart heating algorithms
 - [ ] Energy monitoring

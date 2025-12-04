@@ -32,14 +32,14 @@ async def async_setup_entry(
     coordinator: SmartHeatingCoordinator = hass.data[DOMAIN][entry.entry_id]
     area_manager = coordinator.area_manager
     
-    # Create switch entities for each zone
+    # Create switch entities for each area
     entities = []
     for area_id, area in area_manager.get_all_areas().items():
         entities.append(AreaSwitch(coordinator, entry, area))
     
     # Add entities
     async_add_entities(entities)
-    _LOGGER.info("Smart Heating switch platform setup complete with %d zones", len(entities))
+    _LOGGER.info("Smart Heating switch platform setup complete with %d areas", len(entities))
 
 
 class AreaSwitch(CoordinatorEntity, SwitchEntity):
@@ -60,7 +60,7 @@ class AreaSwitch(CoordinatorEntity, SwitchEntity):
         """
         super().__init__(coordinator)
         
-        self._area = zone
+        self._area = area
         
         # Entity attributes
         self._attr_name = f"Zone {area.name} Control"
@@ -68,27 +68,27 @@ class AreaSwitch(CoordinatorEntity, SwitchEntity):
         self._attr_icon = "mdi:radiator"
         
         _LOGGER.debug(
-            "AreaSwitch initialized for zone %s with unique_id: %s",
+            "AreaSwitch initialized for area %s with unique_id: %s",
             area.area_id,
             self._attr_unique_id,
         )
 
     @property
     def is_on(self) -> bool:
-        """Return true if the zone is enabled.
+        """Return true if the area is enabled.
         
         Returns:
-            True if zone is enabled
+            True if area is enabled
         """
         return self._area.enabled
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn the zone on.
+        """Turn the area on.
         
         Args:
             **kwargs: Additional keyword arguments
         """
-        _LOGGER.debug("Turning on zone %s", self._area.area_id)
+        _LOGGER.debug("Turning on area %s", self._area.area_id)
         
         self.coordinator.area_manager.enable_area(self._area.area_id)
         
@@ -99,12 +99,12 @@ class AreaSwitch(CoordinatorEntity, SwitchEntity):
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Turn the zone off.
+        """Turn the area off.
         
         Args:
             **kwargs: Additional keyword arguments
         """
-        _LOGGER.debug("Turning off zone %s", self._area.area_id)
+        _LOGGER.debug("Turning off area %s", self._area.area_id)
         
         self.coordinator.area_manager.disable_area(self._area.area_id)
         

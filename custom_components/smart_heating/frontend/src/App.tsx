@@ -69,7 +69,7 @@ const theme = createTheme({
 })
 
 function App() {
-  const [zones, setZones] = useState<Zone[]>([])
+  const [areas, setZones] = useState<Zone[]>([])
   const [availableDevices, setAvailableDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [wsConnected, setWsConnected] = useState(false)
@@ -84,9 +84,9 @@ function App() {
       ])
       setZones(zonesData)
       
-      // Filter out devices already assigned to zones
+      // Filter out devices already assigned to areas
       const assignedDeviceIds = new Set(
-        zonesData.flatMap(zone => zone.devices.map(d => d.id))
+        zonesData.flatMap(area => area.devices.map(d => d.id))
       )
       setAvailableDevices(
         devicesData.filter(device => !assignedDeviceIds.has(device.id))
@@ -111,12 +111,12 @@ function App() {
       setShowConnectionAlert(true)
     },
     onZonesUpdate: (updatedZones) => {
-      console.log('Received zones update:', updatedZones)
+      console.log('Received areas update:', updatedZones)
       setZones(updatedZones)
       // Reload devices to update available list
       getDevices().then(devicesData => {
         const assignedDeviceIds = new Set(
-          updatedZones.flatMap(zone => zone.devices.map(d => d.id))
+          updatedZones.flatMap(area => area.devices.map(d => d.id))
         )
         setAvailableDevices(
           devicesData.filter(device => !assignedDeviceIds.has(device.id))
@@ -124,13 +124,13 @@ function App() {
       })
     },
     onZoneUpdate: (updatedZone) => {
-      console.log('Received zone update:', updatedZone)
+      console.log('Received area update:', updatedZone)
       setZones(prevZones => 
         prevZones.map(z => z.id === updatedZone.id ? updatedZone : z)
       )
     },
     onZoneDelete: (zoneId) => {
-      console.log('Received zone delete:', zoneId)
+      console.log('Received area delete:', zoneId)
       setZones(prevZones => prevZones.filter(z => z.id !== zoneId))
       // Reload data to update available devices
       loadData()
@@ -161,8 +161,8 @@ function App() {
       return
     }
 
-    // Extract zone ID from droppable ID (format: "zone-{id}")
-    const zoneId = destination.droppableId.replace('zone-', '')
+    // Extract area ID from droppable ID (format: "area-{id}")
+    const zoneId = destination.droppableId.replace('area-', '')
     
     // Extract device ID from draggable ID (format: "device-{id}")
     const deviceId = result.draggableId.replace('device-', '')
@@ -179,7 +179,7 @@ function App() {
       })
       await loadData() // Refresh the data
     } catch (error) {
-      console.error('Failed to add device to zone:', error)
+      console.error('Failed to add device to area:', error)
     }
   }
 
@@ -195,7 +195,7 @@ function App() {
         <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <Box sx={{ flex: 1, overflow: 'auto', p: 3, bgcolor: 'background.default' }}>
             <ZoneList 
-              zones={zones} 
+              areas={areas} 
               loading={loading}
               onUpdate={handleZonesUpdate}
             />
@@ -215,7 +215,7 @@ function App() {
       <Router basename="/smart_heating_ui">
         <Routes>
           <Route path="/" element={<ZonesOverview />} />
-          <Route path="/zone/:zoneId" element={<ZoneDetail />} />
+          <Route path="/area/:zoneId" element={<ZoneDetail />} />
         </Routes>
       </Router>
       

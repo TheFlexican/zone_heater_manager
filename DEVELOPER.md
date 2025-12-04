@@ -148,14 +148,14 @@ smart_heating/
    <MyComponent data="Hello" />
    ```
 
-### Adding Zone Manager Methods
+### Adding Area Manager Methods
 
 1. **Add method** to `ZoneManager` class in `area_manager.py`:
    ```python
    async def async_my_method(self, area_id: str, param: str) -> bool:
        """My method description."""
-       zone = self.get_zone(area_id)
-       if not zone:
+       area = self.get_zone(area_id)
+       if not area:
            return False
        
        # Do something
@@ -172,10 +172,10 @@ smart_heating/
 
 ## Key Classes
 
-### Zone Class (`area_manager.py`)
+### Area Class (`area_manager.py`)
 
 ```python
-class Zone:
+class Area:
     id: str
     name: str
     target_temperature: float
@@ -195,10 +195,10 @@ class ZoneManager:
     async def async_load() -> None
     async def async_save() -> None
     
-    def get_zone(area_id: str) -> Optional[Zone]
-    def get_all_zones() -> List[Zone]
+    def get_zone(area_id: str) -> Optional[Area]
+    def get_all_zones() -> List[Area]
     
-    async def async_create_zone(...) -> Zone
+    async def async_create_zone(...) -> Area
     async def async_delete_zone(area_id: str) -> bool
     async def async_add_device_to_zone(...) -> bool
     async def async_remove_device_from_zone(...) -> bool
@@ -257,14 +257,14 @@ Use curl or Postman:
 ```bash
 # Get areas
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:8123/api/smart_heating/zones
+  http://localhost:8123/api/smart_heating/areas
 
-# Create zone
+# Create area
 curl -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"area_id":"test","area_name":"Test","temperature":20}' \
-  http://localhost:8123/api/smart_heating/zones
+  http://localhost:8123/api/smart_heating/areas
 ```
 
 ## Debugging

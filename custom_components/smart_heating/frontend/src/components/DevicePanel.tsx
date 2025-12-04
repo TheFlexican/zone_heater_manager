@@ -59,7 +59,7 @@ const DevicePanel = ({ devices }: DevicePanelProps) => {
           Available Devices
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Drag devices to zones
+          Drag devices to areas
         </Typography>
       </Box>
 

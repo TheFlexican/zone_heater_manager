@@ -5,7 +5,7 @@ const API_BASE = '/api/smart_heating'
 
 export const getZones = async (): Promise<Area[]> => {
   const response = await axios.get(`${API_BASE}/areas`)
-  return response.data.zones
+  return response.data.areas
 }
 
 export const getZone = async (areaId: string): Promise<Area> => {
@@ -15,7 +15,7 @@ export const getZone = async (areaId: string): Promise<Area> => {
 
 export const createZone = async (data: AreaCreate): Promise<Area> => {
   const response = await axios.post(`${API_BASE}/areas`, data)
-  return response.data.zone
+  return response.data.area
 }
 
 export const deleteZone = async (areaId: string): Promise<void> => {

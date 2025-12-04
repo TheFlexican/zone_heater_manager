@@ -4,23 +4,27 @@ A Home Assistant custom integration for managing multi-area heating systems with
 
 ## ✨ Features
 
-- 🏠 **Multi-zone heating control** - Create and manage multiple heating areas
+- 🏠 **Multi-area heating control** - Create and manage multiple heating areas
 - 🌡️ **Zigbee2MQTT integration** - Support for thermostats, temperature sensors and OpenTherm gateways
 - 🎛️ **Web-based GUI** - Modern React interface with drag-and-drop device management
+- 📅 **Smart Scheduling** - Time-based temperature profiles with day-of-week selection
+- 🌙 **Night Boost** - Gradual temperature increase during night hours (22:00-06:00)
+- 📊 **Temperature History** - Track and visualize temperature trends with interactive charts
+- ⚙️ **Advanced Settings** - Hysteresis control, temperature limits, and fine-tuning
 - 🌐 **REST API** - Full API for programmatic control
 - 📡 **WebSocket support** - Real-time updates
 - 🎛️ **Climate entities** - Full thermostat control per area
 - 🔌 **Switch entities** - Easy area on/off control
 - 📊 **Sensor entities** - System status monitoring
-- 🛠️ **Service calls** - Manage areas and devices via Home Assistant services
-- 💾 **Persistent storage** - Configuration automatically saved
+- 🛠️ **Service calls** - Comprehensive service API for automation
+- 💾 **Persistent storage** - Configuration and history automatically saved
 - 🔄 **Auto-update** - Data coordinator with 30-second interval
 - 📝 **Debug logging** - Extensive logging for troubleshooting
 
 ## 📋 Supported Device Types
 
 - **Thermostat** - Zigbee thermostats for temperature control
-- **Temperature Sensor** - Temperature sensors for zone monitoring
+- **Temperature Sensor** - Temperature sensors for area monitoring
 - **OpenTherm Gateway** - Zigbee-to-OpenTherm gateways for boiler control
 - **Valve** - Smart radiator valves/thermostatic radiator valves (TRVs)
 
@@ -106,8 +110,12 @@ The web interface allows you to:
 - Set target temperatures with visual sliders (5-30°C)
 - Enable/disable areas with toggle switches
 - View available Zigbee2MQTT devices in the right panel
-- Drag and drop devices into areas (coming soon)
-- Monitor zone states in real-time (heating/idle/off)
+- Drag and drop devices into areas
+- Monitor area states in real-time (heating/idle/off)
+- **Manage Schedules** - Create time-based temperature profiles
+- **View History** - Interactive temperature charts with multiple time ranges
+- **Configure Settings** - Night boost, hysteresis, and advanced options
+- Real-time WebSocket updates for instant feedback
 
 ### Building the Frontend
 
@@ -130,14 +138,14 @@ See `custom_components/smart_heating/frontend/README.md` for more details.
 
 After installation, the following entities will be created:
 
-### Per Zone:
+### Per Area:
 - `climate.area_<area_name>` - Climate entity for temperature control
 - `switch.area_<area_name>_control` - Switch to turn area on/off
 - `sensor.smart_heating_status` - General status sensor
 
 ## 🛠️ Services
 
-### Zone Management
+### Area Management
 
 #### `smart_heating.create_zone`
 Create a new heating area.
@@ -160,7 +168,7 @@ data:
 Delete an existing area.
 
 **Parameters:**
-- `area_id` (required): Zone identifier
+- `area_id` (required): Area identifier
 
 **Example:**
 ```yaml
@@ -173,7 +181,7 @@ data:
 Enable heating for a area.
 
 **Parameters:**
-- `area_id` (required): Zone identifier
+- `area_id` (required): Area identifier
 
 **Example:**
 ```yaml
@@ -186,7 +194,7 @@ data:
 Disable heating for a area.
 
 **Parameters:**
-- `area_id` (required): Zone identifier
+- `area_id` (required): Area identifier
 
 **Example:**
 ```yaml
@@ -201,7 +209,7 @@ data:
 Add a Zigbee2MQTT device to a area.
 
 **Parameters:**
-- `area_id` (required): Zone identifier
+- `area_id` (required): Area identifier
 - `device_id` (required): Zigbee2MQTT device ID (e.g. "0x00158d0001a2b3c4")
 - `device_type` (required): Device type (`thermostat`, `temperature_sensor`, `opentherm_gateway`, `valve`)
 
@@ -218,7 +226,7 @@ data:
 Remove a device from a area.
 
 **Parameters:**
-- `area_id` (required): Zone identifier
+- `area_id` (required): Area identifier
 - `device_id` (required): Device identifier
 
 **Example:**
@@ -235,7 +243,7 @@ data:
 Set the target temperature for a area.
 
 **Parameters:**
-- `area_id` (required): Zone identifier
+- `area_id` (required): Area identifier
 - `temperature` (required): Target temperature in °C (5-30°C)
 
 **Example:**
@@ -252,6 +260,83 @@ Manually refresh Smart Heating data.
 **Example:**
 ```yaml
 service: smart_heating.refresh
+```
+
+### Schedule Management
+
+#### `smart_heating.add_schedule`
+Add a temperature schedule to an area.
+
+**Parameters:**
+- `area_id` (required): Area identifier
+- `schedule_id` (required): Unique schedule identifier
+- `time` (required): Time in HH:MM format
+- `temperature` (required): Target temperature in °C
+- `days` (optional): Days of week (mon, tue, wed, thu, fri, sat, sun)
+
+**Example:**
+```yaml
+service: smart_heating.add_schedule
+data:
+  area_id: "living_room"
+  schedule_id: "morning_warmup"
+  time: "07:00"
+  temperature: 21.5
+  days: ["mon", "tue", "wed", "thu", "fri"]
+```
+
+#### `smart_heating.remove_schedule`
+Remove a schedule from an area.
+
+**Parameters:**
+- `area_id` (required): Area identifier
+- `schedule_id` (required): Schedule identifier
+
+**Example:**
+```yaml
+service: smart_heating.remove_schedule
+data:
+  area_id: "living_room"
+  schedule_id: "morning_warmup"
+```
+
+#### `smart_heating.enable_schedule` / `smart_heating.disable_schedule`
+Enable or disable a specific schedule.
+
+**Parameters:**
+- `area_id` (required): Area identifier
+- `schedule_id` (required): Schedule identifier
+
+### Advanced Settings
+
+#### `smart_heating.set_night_boost`
+Configure night boost for an area (gradually increase temperature during night hours).
+
+**Parameters:**
+- `area_id` (required): Area identifier
+- `night_boost_enabled` (optional): Enable/disable night boost
+- `night_boost_offset` (optional): Temperature offset in °C (0-3°C)
+
+**Example:**
+```yaml
+service: smart_heating.set_night_boost
+data:
+  area_id: "bedroom"
+  night_boost_enabled: true
+  night_boost_offset: 0.5  # Add 0.5°C during night hours
+```
+
+#### `smart_heating.set_hysteresis`
+Set global temperature hysteresis for heating control.
+
+**Parameters:**
+- `hysteresis` (required): Temperature difference in °C (0.1-2.0°C)
+
+**Example:**
+```yaml
+service: smart_heating.set_hysteresis
+data:
+  hysteresis: 0.5  # Heating turns on at target-0.5°C
 ```
 
 ## 📖 Usage
@@ -274,7 +359,7 @@ automation:
       - platform: homeassistant
         event: start
     action:
-      # Create living room zone
+      # Create living room area
       - service: smart_heating.create_zone
         data:
           area_id: "living_room"
@@ -341,20 +426,20 @@ custom_components/smart_heating/
 ├── sensor.py            # Sensor platform
 ├── services.yaml        # Service definitions
 ├── strings.json         # UI translations
-├── switch.py            # Switch platform for zone control
-└── area_manager.py      # Zone management logic
+├── switch.py            # Switch platform for area control
+└── area_manager.py      # Area management logic
 ```
 
 ### Future Features (Roadmap)
 
-- 🎨 **Web GUI** - Drag & drop interface for zone and device management
-- 🤖 **Smart Heating** - AI-driven heating optimization
-- 📊 **Analytics** - Energy monitoring and statistics
+- 🤖 **AI-Driven Optimization** - Machine learning for heating patterns
+- 📊 **Energy Analytics** - Detailed energy monitoring and cost tracking
 - 🔗 **MQTT Auto-discovery** - Automatic detection of Zigbee2MQTT devices
-- ⏱️ **Schedules** - Time-based temperature profiles per area
-- 👥 **Presence Detection** - Presence-based heating
-- 🌡️ **Multi-sensor averaging** - Multiple sensors per area
-- 🔥 **Boiler Control** - Direct OpenTherm boiler control
+- 👥 **Presence Detection** - Occupancy-based heating control
+- 🌡️ **Weather Integration** - Weather-based temperature optimization
+- 🔥 **Advanced Boiler Control** - PID control for OpenTherm gateways
+- 📱 **Mobile Notifications** - Push notifications for heating events
+- 🏡 **Multi-home Support** - Manage multiple locations
 
 ## 📝 Version
 
@@ -363,9 +448,9 @@ Current version: **0.1.0**
 ### Changelog
 
 #### v0.1.0 (2025-12-04)
-- ✨ Zone management system
+- ✨ Area management system
 - ✨ Climate entities per area
-- ✨ Switch entities for zone control
+- ✨ Switch entities for area control
 - ✨ Extensive service calls
 - ✨ Zigbee2MQTT device support
 - ✨ Persistent storage of configuration
@@ -392,12 +477,12 @@ Contributions are welcome! Feel free to submit a Pull Request.
 
 ## ❓ Troubleshooting
 
-### Zone not being created
+### Area not being created
 - Check if `area_id` is unique
 - Check debug logs: add `logger` configuration
 - Verify that the integration is loaded correctly
 
-### Device not appearing in zone
+### Device not appearing in area
 - Check if `device_id` is correct (Zigbee2MQTT friendly name or IEEE address)
 - Verify that `device_type` is set correctly
 - Check if Zigbee2MQTT is active and devices are visible

@@ -38,8 +38,8 @@ const CreateZoneDialog = ({ open, onClose, onSuccess }: CreateZoneDialogProps) =
       onSuccess()
       onClose()
     } catch (error) {
-      console.error('Failed to create zone:', error)
-      alert('Failed to create zone. Check console for details.')
+      console.error('Failed to create area:', error)
+      alert('Failed to create area. Check console for details.')
     } finally {
       setLoading(false)
     }

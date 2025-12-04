@@ -25,7 +25,7 @@ DAYS_OF_WEEK = {
 
 
 class ScheduleExecutor:
-    """Execute zone schedules to control temperatures."""
+    """Execute area schedules to control temperatures."""
 
     def __init__(self, hass: HomeAssistant, area_manager: AreaManager) -> None:
         """Initialize the schedule executor.
@@ -37,7 +37,7 @@ class ScheduleExecutor:
         self.hass = hass
         self.area_manager = area_manager
         self._unsub_interval = None
-        self._last_applied_schedule = {}  # Track last applied schedule per zone
+        self._last_applied_schedule = {}  # Track last applied schedule per area
         _LOGGER.info("Schedule executor initialized")
 
     async def async_start(self) -> None:
@@ -63,7 +63,7 @@ class ScheduleExecutor:
         _LOGGER.info("Schedule executor stopped")
 
     async def _async_check_schedules(self, now: Optional[datetime] = None) -> None:
-        """Check all zone schedules and apply temperatures if needed.
+        """Check all area schedules and apply temperatures if needed.
         
         Args:
             now: Current datetime (for testing, otherwise uses current time)
@@ -80,39 +80,39 @@ class ScheduleExecutor:
             current_time.strftime("%H:%M"),
         )
         
-        zones = self.area_manager.get_all_zones()
+        areas = self.area_manager.get_all_areas()
         
-        for zone_id, zone in zones.items():
-            if not zone.enabled:
-                _LOGGER.debug("Zone %s is disabled, skipping schedule check", zone.name)
+        for area_id, area in areas.items():
+            if not area.enabled:
+                _LOGGER.debug("Area %s is disabled, skipping schedule check", area.name)
                 continue
                 
-            if not zone.schedules:
+            if not area.schedules:
                 continue
                 
             # Find active schedule for current day/time
             active_schedule = self._find_active_schedule(
-                zone.schedules,
+                area.schedules,
                 current_day,
                 current_time,
             )
             
             if active_schedule:
-                schedule_key = f"{zone_id}_{active_schedule['id']}"
+                schedule_key = f"{area_id}_{active_schedule['id']}"
                 
                 # Only apply if this schedule hasn't been applied yet
                 # (to avoid setting temperature every minute)
                 if self._last_applied_schedule.get(area_id) != schedule_key:
                     await self._apply_schedule(area, active_schedule)
-                    self._last_applied_schedule[zone_id] = schedule_key
+                    self._last_applied_schedule[area_id] = schedule_key
                     
             else:
                 # No active schedule, clear the tracking
-                if zone_id in self._last_applied_schedule:
-                    del self._last_applied_schedule[zone_id]
+                if area_id in self._last_applied_schedule:
+                    del self._last_applied_schedule[area_id]
                     _LOGGER.debug(
-                        "No active schedule for zone %s at %s %s",
-                        zone.name,
+                        "No active schedule for area %s at %s %s",
+                        area.name,
                         current_day,
                         current_time.strftime("%H:%M"),
                     )
@@ -154,8 +154,8 @@ class ScheduleExecutor:
                     
         return None
 
-    async def _apply_schedule(self, zone, schedule: dict) -> None:
-        """Apply a schedule's temperature to a zone.
+    async def _apply_schedule(self, area, schedule: dict) -> None:
+        """Apply a schedule's temperature to a area.
         
         Args:
             area: Zone object
@@ -164,19 +164,19 @@ class ScheduleExecutor:
         target_temp = schedule["temperature"]
         
         _LOGGER.info(
-            "Applying schedule to zone %s: %s-%s @ %s°C",
-            zone.name,
+            "Applying schedule to area %s: %s-%s @ %s°C",
+            area.name,
             schedule["start_time"],
             schedule["end_time"],
             target_temp,
         )
         
-        # Update zone target temperature
-        zone.target_temperature = target_temp
+        # Update area target temperature
+        area.target_temperature = target_temp
         await self.area_manager.async_save()
         
         # Update the climate entity if it exists
-        climate_entity_id = f"climate.smart_heating_{zone.zone_id}"
+        climate_entity_id = f"climate.smart_heating_{area.area_id}"
         
         # Call the climate service to set temperature
         try:

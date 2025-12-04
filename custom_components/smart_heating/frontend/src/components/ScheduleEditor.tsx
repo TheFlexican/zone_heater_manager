@@ -22,7 +22,7 @@ import { Zone, ScheduleEntry } from '../types'
 import { addScheduleToZone, removeScheduleFromZone } from '../api'
 
 interface ScheduleEditorProps {
-  zone: Zone
+  area: Zone
   onUpdate: () => void
 }
 
@@ -36,8 +36,8 @@ const DAYS_OF_WEEK: string[] = [
   'Sunday',
 ]
 
-const ScheduleEditor = ({ zone, onUpdate }: ScheduleEditorProps) => {
-  const [schedules, setSchedules] = useState<ScheduleEntry[]>(zone.schedules || [])
+const ScheduleEditor = ({ area, onUpdate }: ScheduleEditorProps) => {
+  const [schedules, setSchedules] = useState<ScheduleEntry[]>(area.schedules || [])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<ScheduleEntry | null>(null)
   const [formData, setFormData] = useState({
@@ -48,8 +48,8 @@ const ScheduleEditor = ({ zone, onUpdate }: ScheduleEditorProps) => {
   })
 
   useEffect(() => {
-    setSchedules(zone.schedules || [])
-  }, [zone])
+    setSchedules(area.schedules || [])
+  }, [area])
 
   const handleAddNew = () => {
     setEditingEntry(null)
@@ -75,7 +75,7 @@ const ScheduleEditor = ({ zone, onUpdate }: ScheduleEditorProps) => {
 
   const handleDelete = async (id: string) => {
     try {
-      await removeScheduleFromZone(zone.id, id)
+      await removeScheduleFromZone(area.id, id)
       onUpdate()
     } catch (error) {
       console.error('Failed to delete schedule:', error)
@@ -86,7 +86,7 @@ const ScheduleEditor = ({ zone, onUpdate }: ScheduleEditorProps) => {
     try {
       if (editingEntry) {
         // For updates, we remove old and add new
-        await removeScheduleFromZone(zone.id, editingEntry.id)
+        await removeScheduleFromZone(area.id, editingEntry.id)
       }
       
       const newEntry: ScheduleEntry = {
@@ -94,7 +94,7 @@ const ScheduleEditor = ({ zone, onUpdate }: ScheduleEditorProps) => {
         ...formData,
       }
       
-      await addScheduleToZone(zone.id, newEntry)
+      await addScheduleToZone(area.id, newEntry)
       onUpdate()
       setDialogOpen(false)
     } catch (error) {
@@ -121,7 +121,7 @@ const ScheduleEditor = ({ zone, onUpdate }: ScheduleEditorProps) => {
             id: `${day}_${schedule.id}_${Date.now()}`,
             day,
           }
-          await addScheduleToZone(zone.id, newEntry)
+          await addScheduleToZone(area.id, newEntry)
         }
       }
       
@@ -141,7 +141,7 @@ const ScheduleEditor = ({ zone, onUpdate }: ScheduleEditorProps) => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h6" color="text.primary">
-          Weekly Schedule for {zone.name}
+          Weekly Schedule for {area.name}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button

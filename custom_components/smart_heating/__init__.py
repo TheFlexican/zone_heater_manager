@@ -17,6 +17,12 @@ from .const import (
     ATTR_TEMPERATURE,
     ATTR_AREA_ID,
     ATTR_AREA_NAME,
+    ATTR_SCHEDULE_ID,
+    ATTR_TIME,
+    ATTR_DAYS,
+    ATTR_NIGHT_BOOST_ENABLED,
+    ATTR_NIGHT_BOOST_OFFSET,
+    ATTR_HYSTERESIS,
     DEVICE_TYPE_OPENTHERM_GATEWAY,
     DEVICE_TYPE_TEMPERATURE_SENSOR,
     DEVICE_TYPE_THERMOSTAT,
@@ -31,12 +37,20 @@ from .const import (
     SERVICE_REFRESH,
     SERVICE_REMOVE_DEVICE_FROM_AREA,
     SERVICE_SET_AREA_TEMPERATURE,
+    SERVICE_ADD_SCHEDULE,
+    SERVICE_REMOVE_SCHEDULE,
+    SERVICE_ENABLE_SCHEDULE,
+    SERVICE_DISABLE_SCHEDULE,
+    SERVICE_SET_NIGHT_BOOST,
+    SERVICE_SET_HYSTERESIS,
 )
 from .coordinator import SmartHeatingCoordinator
 from .area_manager import AreaManager
 from .api import setup_api
 from .websocket import setup_websocket
 from .climate_controller import ClimateController
+from .scheduler import ScheduleExecutor
+from .history import HistoryTracker
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,9 +70,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     _LOGGER.debug("Setting up Smart Heating integration")
     
-    # Create zone manager
+    # Create area manager
     area_manager = AreaManager(hass)
     await area_manager.async_load()
+    
+    # Create history tracker
+    history_tracker = HistoryTracker(hass)
+    await history_tracker.async_load()
+    hass.data[DOMAIN]["history"] = history_tracker
     
     # Create coordinator instance
     coordinator = SmartHeatingCoordinator(hass, area_manager)
@@ -99,6 +118,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.async_create_task(run_initial_control())
     
     _LOGGER.info("Climate controller started with 30-second update interval")
+    
+    # Create and start schedule executor
+    schedule_executor = ScheduleExecutor(hass, area_manager)
+    hass.data[DOMAIN]["schedule_executor"] = schedule_executor
+    await schedule_executor.async_start()
+    _LOGGER.info("Schedule executor started")
     
     # Forward the setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -162,13 +187,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         zone_name = call.data[ATTR_AREA_NAME]
         temperature = call.data.get(ATTR_TEMPERATURE, 20.0)
         
-        _LOGGER.debug("Creating zone %s (%s) with temperature %.1f°C", area_id, area_name, temperature)
+        _LOGGER.debug("Creating area %s (%s) with temperature %.1f°C", area_id, area_name, temperature)
         
         try:
             area_manager.create_area(area_id, area_name, temperature)
             await area_manager.async_save()
             await coordinator.async_request_refresh()
-            _LOGGER.info("Created zone %s", area_id)
+            _LOGGER.info("Created area %s", area_id)
         except ValueError as err:
             _LOGGER.error("Failed to create area: %s", err)
     
@@ -176,13 +201,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         """Handle the delete_zone service call."""
         area_id = call.data[ATTR_AREA_ID]
         
-        _LOGGER.debug("Deleting zone %s", area_id)
+        _LOGGER.debug("Deleting area %s", area_id)
         
         try:
             area_manager.delete_area(area_id)
             await area_manager.async_save()
             await coordinator.async_request_refresh()
-            _LOGGER.info("Deleted zone %s", area_id)
+            _LOGGER.info("Deleted area %s", area_id)
         except ValueError as err:
             _LOGGER.error("Failed to delete area: %s", err)
     
@@ -192,13 +217,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         device_id = call.data[ATTR_DEVICE_ID]
         device_type = call.data[ATTR_DEVICE_TYPE]
         
-        _LOGGER.debug("Adding device %s (type: %s) to zone %s", device_id, device_type, area_id)
+        _LOGGER.debug("Adding device %s (type: %s) to area %s", device_id, device_type, area_id)
         
         try:
             area_manager.add_device_to_area(area_id, device_id, device_type)
             await area_manager.async_save()
             await coordinator.async_request_refresh()
-            _LOGGER.info("Added device %s to zone %s", device_id, area_id)
+            _LOGGER.info("Added device %s to area %s", device_id, area_id)
         except ValueError as err:
             _LOGGER.error("Failed to add device: %s", err)
     
@@ -207,13 +232,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         area_id = call.data[ATTR_AREA_ID]
         device_id = call.data[ATTR_DEVICE_ID]
         
-        _LOGGER.debug("Removing device %s from zone %s", device_id, area_id)
+        _LOGGER.debug("Removing device %s from area %s", device_id, area_id)
         
         try:
             area_manager.remove_device_from_area(area_id, device_id)
             await area_manager.async_save()
             await coordinator.async_request_refresh()
-            _LOGGER.info("Removed device %s from zone %s", device_id, area_id)
+            _LOGGER.info("Removed device %s from area %s", device_id, area_id)
         except ValueError as err:
             _LOGGER.error("Failed to remove device: %s", err)
     
@@ -222,13 +247,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         area_id = call.data[ATTR_AREA_ID]
         temperature = call.data[ATTR_TEMPERATURE]
         
-        _LOGGER.debug("Setting zone %s temperature to %.1f°C", area_id, temperature)
+        _LOGGER.debug("Setting area %s temperature to %.1f°C", area_id, temperature)
         
         try:
             area_manager.set_area_target_temperature(area_id, temperature)
             await area_manager.async_save()
             await coordinator.async_request_refresh()
-            _LOGGER.info("Set zone %s temperature to %.1f°C", area_id, temperature)
+            _LOGGER.info("Set area %s temperature to %.1f°C", area_id, temperature)
         except ValueError as err:
             _LOGGER.error("Failed to set temperature: %s", err)
     
@@ -236,13 +261,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         """Handle the enable_zone service call."""
         area_id = call.data[ATTR_AREA_ID]
         
-        _LOGGER.debug("Enabling zone %s", area_id)
+        _LOGGER.debug("Enabling area %s", area_id)
         
         try:
             area_manager.enable_area(area_id)
             await area_manager.async_save()
             await coordinator.async_request_refresh()
-            _LOGGER.info("Enabled zone %s", area_id)
+            _LOGGER.info("Enabled area %s", area_id)
         except ValueError as err:
             _LOGGER.error("Failed to enable area: %s", err)
     
@@ -250,15 +275,128 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         """Handle the disable_zone service call."""
         area_id = call.data[ATTR_AREA_ID]
         
-        _LOGGER.debug("Disabling zone %s", area_id)
+        _LOGGER.debug("Disabling area %s", area_id)
         
         try:
             area_manager.disable_area(area_id)
             await area_manager.async_save()
             await coordinator.async_request_refresh()
-            _LOGGER.info("Disabled zone %s", area_id)
+            _LOGGER.info("Disabled area %s", area_id)
         except ValueError as err:
             _LOGGER.error("Failed to disable area: %s", err)
+    
+    async def async_handle_add_schedule(call: ServiceCall) -> None:
+        """Handle the add_schedule service call."""
+        area_id = call.data[ATTR_AREA_ID]
+        schedule_id = call.data[ATTR_SCHEDULE_ID]
+        time_str = call.data[ATTR_TIME]
+        temperature = call.data[ATTR_TEMPERATURE]
+        days = call.data.get(ATTR_DAYS)
+        
+        _LOGGER.debug("Adding schedule %s to area %s: %s @ %.1f°C", 
+                     schedule_id, area_id, time_str, temperature)
+        
+        try:
+            area_manager.add_schedule_to_area(area_id, schedule_id, time_str, temperature, days)
+            await area_manager.async_save()
+            await coordinator.async_request_refresh()
+            _LOGGER.info("Added schedule %s to area %s", schedule_id, area_id)
+        except ValueError as err:
+            _LOGGER.error("Failed to add schedule: %s", err)
+    
+    async def async_handle_remove_schedule(call: ServiceCall) -> None:
+        """Handle the remove_schedule service call."""
+        area_id = call.data[ATTR_AREA_ID]
+        schedule_id = call.data[ATTR_SCHEDULE_ID]
+        
+        _LOGGER.debug("Removing schedule %s from area %s", schedule_id, area_id)
+        
+        try:
+            area_manager.remove_schedule_from_area(area_id, schedule_id)
+            await area_manager.async_save()
+            await coordinator.async_request_refresh()
+            _LOGGER.info("Removed schedule %s from area %s", schedule_id, area_id)
+        except ValueError as err:
+            _LOGGER.error("Failed to remove schedule: %s", err)
+    
+    async def async_handle_enable_schedule(call: ServiceCall) -> None:
+        """Handle the enable_schedule service call."""
+        area_id = call.data[ATTR_AREA_ID]
+        schedule_id = call.data[ATTR_SCHEDULE_ID]
+        
+        _LOGGER.debug("Enabling schedule %s in area %s", schedule_id, area_id)
+        
+        try:
+            area = area_manager.get_area(area_id)
+            if area and schedule_id in area.schedules:
+                area.schedules[schedule_id].enabled = True
+                await area_manager.async_save()
+                await coordinator.async_request_refresh()
+                _LOGGER.info("Enabled schedule %s in area %s", schedule_id, area_id)
+            else:
+                raise ValueError(f"Schedule {schedule_id} not found in area {area_id}")
+        except ValueError as err:
+            _LOGGER.error("Failed to enable schedule: %s", err)
+    
+    async def async_handle_disable_schedule(call: ServiceCall) -> None:
+        """Handle the disable_schedule service call."""
+        area_id = call.data[ATTR_AREA_ID]
+        schedule_id = call.data[ATTR_SCHEDULE_ID]
+        
+        _LOGGER.debug("Disabling schedule %s in area %s", schedule_id, area_id)
+        
+        try:
+            area = area_manager.get_area(area_id)
+            if area and schedule_id in area.schedules:
+                area.schedules[schedule_id].enabled = False
+                await area_manager.async_save()
+                await coordinator.async_request_refresh()
+                _LOGGER.info("Disabled schedule %s in area %s", schedule_id, area_id)
+            else:
+                raise ValueError(f"Schedule {schedule_id} not found in area {area_id}")
+        except ValueError as err:
+            _LOGGER.error("Failed to disable schedule: %s", err)
+    
+    async def async_handle_set_night_boost(call: ServiceCall) -> None:
+        """Handle the set_night_boost service call."""
+        area_id = call.data[ATTR_AREA_ID]
+        enabled = call.data.get(ATTR_NIGHT_BOOST_ENABLED)
+        offset = call.data.get(ATTR_NIGHT_BOOST_OFFSET)
+        
+        _LOGGER.debug("Setting night boost for area %s: enabled=%s, offset=%s", 
+                     area_id, enabled, offset)
+        
+        try:
+            area = area_manager.get_area(area_id)
+            if area is None:
+                raise ValueError(f"Area {area_id} does not exist")
+            
+            if enabled is not None:
+                area.night_boost_enabled = enabled
+            if offset is not None:
+                area.night_boost_offset = offset
+            
+            await area_manager.async_save()
+            await coordinator.async_request_refresh()
+            _LOGGER.info("Updated night boost for area %s", area_id)
+        except ValueError as err:
+            _LOGGER.error("Failed to set night boost: %s", err)
+    
+    async def async_handle_set_hysteresis(call: ServiceCall) -> None:
+        """Handle the set_hysteresis service call."""
+        hysteresis = call.data[ATTR_HYSTERESIS]
+        
+        _LOGGER.debug("Setting global hysteresis to %.2f°C", hysteresis)
+        
+        try:
+            climate_controller = hass.data[DOMAIN].get("climate_controller")
+            if climate_controller:
+                climate_controller._hysteresis = hysteresis
+                _LOGGER.info("Set global hysteresis to %.2f°C", hysteresis)
+            else:
+                raise ValueError("Climate controller not found")
+        except ValueError as err:
+            _LOGGER.error("Failed to set hysteresis: %s", err)
     
     # Service schemas
     CREATE_ZONE_SCHEMA = vol.Schema({
@@ -296,6 +434,34 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         vol.Required(ATTR_AREA_ID): cv.string,
     })
     
+    ADD_SCHEDULE_SCHEMA = vol.Schema({
+        vol.Required(ATTR_AREA_ID): cv.string,
+        vol.Required(ATTR_SCHEDULE_ID): cv.string,
+        vol.Required(ATTR_TIME): cv.string,
+        vol.Required(ATTR_TEMPERATURE): vol.Coerce(float),
+        vol.Optional(ATTR_DAYS): vol.All(cv.ensure_list, [cv.string]),
+    })
+    
+    REMOVE_SCHEDULE_SCHEMA = vol.Schema({
+        vol.Required(ATTR_AREA_ID): cv.string,
+        vol.Required(ATTR_SCHEDULE_ID): cv.string,
+    })
+    
+    SCHEDULE_CONTROL_SCHEMA = vol.Schema({
+        vol.Required(ATTR_AREA_ID): cv.string,
+        vol.Required(ATTR_SCHEDULE_ID): cv.string,
+    })
+    
+    NIGHT_BOOST_SCHEMA = vol.Schema({
+        vol.Required(ATTR_AREA_ID): cv.string,
+        vol.Optional(ATTR_NIGHT_BOOST_ENABLED): cv.boolean,
+        vol.Optional(ATTR_NIGHT_BOOST_OFFSET): vol.Coerce(float),
+    })
+    
+    HYSTERESIS_SCHEMA = vol.Schema({
+        vol.Required(ATTR_HYSTERESIS): vol.Coerce(float),
+    })
+    
     # Register all services
     hass.services.async_register(DOMAIN, SERVICE_REFRESH, async_handle_refresh)
     hass.services.async_register(DOMAIN, SERVICE_CREATE_AREA, async_handle_create_zone, schema=CREATE_ZONE_SCHEMA)
@@ -305,6 +471,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
     hass.services.async_register(DOMAIN, SERVICE_SET_AREA_TEMPERATURE, async_handle_set_temperature, schema=SET_TEMPERATURE_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_ENABLE_AREA, async_handle_enable_zone, schema=ZONE_ID_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_DISABLE_AREA, async_handle_disable_zone, schema=ZONE_ID_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_ADD_SCHEDULE, async_handle_add_schedule, schema=ADD_SCHEDULE_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_REMOVE_SCHEDULE, async_handle_remove_schedule, schema=REMOVE_SCHEDULE_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_ENABLE_SCHEDULE, async_handle_enable_schedule, schema=SCHEDULE_CONTROL_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_DISABLE_SCHEDULE, async_handle_disable_schedule, schema=SCHEDULE_CONTROL_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SET_NIGHT_BOOST, async_handle_set_night_boost, schema=NIGHT_BOOST_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SET_HYSTERESIS, async_handle_set_hysteresis, schema=HYSTERESIS_SCHEMA)
     
     _LOGGER.debug("All services registered")
 
@@ -330,6 +502,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN]["climate_unsub"]()
             _LOGGER.debug("Climate controller stopped")
         
+        # Stop schedule executor
+        if "schedule_executor" in hass.data[DOMAIN]:
+            await hass.data[DOMAIN]["schedule_executor"].async_stop()
+            _LOGGER.debug("Schedule executor stopped")
+        
         # Remove coordinator from hass.data
         hass.data[DOMAIN].pop(entry.entry_id)
         _LOGGER.debug("Smart Heating coordinator removed from hass.data")
@@ -351,6 +528,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.services.async_remove(DOMAIN, SERVICE_SET_AREA_TEMPERATURE)
             hass.services.async_remove(DOMAIN, SERVICE_ENABLE_AREA)
             hass.services.async_remove(DOMAIN, SERVICE_DISABLE_AREA)
+            hass.services.async_remove(DOMAIN, SERVICE_ADD_SCHEDULE)
+            hass.services.async_remove(DOMAIN, SERVICE_REMOVE_SCHEDULE)
+            hass.services.async_remove(DOMAIN, SERVICE_ENABLE_SCHEDULE)
+            hass.services.async_remove(DOMAIN, SERVICE_DISABLE_SCHEDULE)
+            hass.services.async_remove(DOMAIN, SERVICE_SET_NIGHT_BOOST)
+            hass.services.async_remove(DOMAIN, SERVICE_SET_HYSTERESIS)
             _LOGGER.debug("Smart Heating services removed")
     
     _LOGGER.info("Smart Heating integration unloaded")

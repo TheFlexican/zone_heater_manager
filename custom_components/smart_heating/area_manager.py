@@ -101,7 +101,7 @@ class Schedule:
 
 
 class Area:
-    """Representation of a heating zone."""
+    """Representation of a heating area."""
 
     def __init__(
         self,
@@ -110,13 +110,13 @@ class Area:
         target_temperature: float = 20.0,
         enabled: bool = True,
     ) -> None:
-        """Initialize a zone.
+        """Initialize a area.
         
         Args:
-            area_id: Unique identifier for the zone
-            name: Display name of the zone
-            target_temperature: Target temperature for the zone
-            enabled: Whether the zone is enabled
+            area_id: Unique identifier for the area
+            name: Display name of the area
+            target_temperature: Target temperature for the area
+            enabled: Whether the area is enabled
         """
         self.area_id = area_id
         self.name = name
@@ -129,7 +129,7 @@ class Area:
         self.night_boost_offset: float = 0.5  # Add 0.5°C during night hours
 
     def add_device(self, device_id: str, device_type: str, mqtt_topic: str | None = None) -> None:
-        """Add a device to the zone.
+        """Add a device to the area.
         
         Args:
             device_id: Unique identifier for the device
@@ -141,20 +141,20 @@ class Area:
             "mqtt_topic": mqtt_topic,
             "entity_id": None,
         }
-        _LOGGER.debug("Added device %s (type: %s) to zone %s", device_id, device_type, self.area_id)
+        _LOGGER.debug("Added device %s (type: %s) to area %s", device_id, device_type, self.area_id)
 
     def remove_device(self, device_id: str) -> None:
-        """Remove a device from the zone.
+        """Remove a device from the area.
         
         Args:
             device_id: Unique identifier for the device
         """
         if device_id in self.devices:
             del self.devices[device_id]
-            _LOGGER.debug("Removed device %s from zone %s", device_id, self.area_id)
+            _LOGGER.debug("Removed device %s from area %s", device_id, self.area_id)
 
     def get_temperature_sensors(self) -> list[str]:
-        """Get all temperature sensor device IDs in the zone.
+        """Get all temperature sensor device IDs in the area.
         
         Returns:
             List of temperature sensor device IDs
@@ -166,7 +166,7 @@ class Area:
         ]
 
     def get_thermostats(self) -> list[str]:
-        """Get all thermostat device IDs in the zone.
+        """Get all thermostat device IDs in the area.
         
         Returns:
             List of thermostat device IDs
@@ -178,7 +178,7 @@ class Area:
         ]
 
     def get_opentherm_gateways(self) -> list[str]:
-        """Get all OpenTherm gateway device IDs in the zone.
+        """Get all OpenTherm gateway device IDs in the area.
         
         Returns:
             List of OpenTherm gateway device IDs
@@ -265,7 +265,7 @@ class Area:
 
     @property
     def current_temperature(self) -> float | None:
-        """Get the current temperature of the zone.
+        """Get the current temperature of the area.
         
         Returns:
             Current temperature or None
@@ -274,7 +274,7 @@ class Area:
 
     @current_temperature.setter
     def current_temperature(self, value: float | None) -> None:
-        """Set the current temperature of the zone.
+        """Set the current temperature of the area.
         
         Args:
             value: New temperature value
@@ -283,7 +283,7 @@ class Area:
 
     @property
     def state(self) -> str:
-        """Get the current state of the zone.
+        """Get the current state of the area.
         
         Returns:
             Current state (heating, idle, off)
@@ -298,10 +298,10 @@ class Area:
         return STATE_IDLE
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert zone to dictionary for storage.
+        """Convert area to dictionary for storage.
         
         Returns:
-            Dictionary representation of the zone
+            Dictionary representation of the area
         """
         return {
             ATTR_AREA_ID: self.area_id,
@@ -316,10 +316,10 @@ class Area:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Area":
-        """Create a zone from dictionary.
+        """Create a area from dictionary.
         
         Args:
-            data: Dictionary with zone data
+            data: Dictionary with area data
             
         Returns:
             Zone instance
@@ -343,80 +343,80 @@ class Area:
 
 
 class AreaManager:
-    """Manage heating zones."""
+    """Manage heating areas."""
 
     def __init__(self, hass: HomeAssistant) -> None:
-        """Initialize the zone manager.
+        """Initialize the area manager.
         
         Args:
             hass: Home Assistant instance
         """
         self.hass = hass
-        self.zones: dict[str, Area] = {}
+        self.areas: dict[str, Area] = {}
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         _LOGGER.debug("AreaManager initialized")
 
     async def async_load(self) -> None:
-        """Load zones from storage."""
+        """Load areas from storage."""
         _LOGGER.debug("Loading areas from storage")
         data = await self._store.async_load()
         
         if data is not None and "areas" in data:
             for area_data in data["areas"]:
                 area = Area.from_dict(area_data)
-                self.zones[area.area_id] = area
-            _LOGGER.info("Loaded %d areas from storage", len(self.zones))
+                self.areas[area.area_id] = area
+            _LOGGER.info("Loaded %d areas from storage", len(self.areas))
         else:
             _LOGGER.debug("No areas found in storage")
 
     async def async_save(self) -> None:
-        """Save zones to storage."""
+        """Save areas to storage."""
         _LOGGER.debug("Saving areas to storage")
         data = {
-            "areas": [area.to_dict() for area in self.zones.values()]
+            "areas": [area.to_dict() for area in self.areas.values()]
         }
         await self._store.async_save(data)
-        _LOGGER.info("Saved %d areas to storage", len(self.zones))
+        _LOGGER.info("Saved %d areas to storage", len(self.areas))
 
     def create_area(self, area_id: str, name: str, target_temperature: float = 20.0) -> Area:
-        """Create a new zone.
+        """Create a new area.
         
         Args:
-            area_id: Unique identifier for the zone
-            name: Display name of the zone
-            target_temperature: Target temperature for the zone
+            area_id: Unique identifier for the area
+            name: Display name of the area
+            target_temperature: Target temperature for the area
             
         Returns:
-            Created zone
+            Created area
             
         Raises:
-            ValueError: If zone already exists
+            ValueError: If area already exists
         """
-        if area_id in self.zones:
+        if area_id in self.areas:
             raise ValueError(f"Area {area_id} already exists")
         
         area = Area(area_id, name, target_temperature)
-        self.zones[area_id] = area
+        self.areas[area_id] = area
         _LOGGER.info("Created area %s (%s)", area_id, name)
         return area
 
     def delete_area(self, area_id: str) -> None:
-        """Delete a zone.
+        """Delete a area.
         
         Args:
             area_id: Zone identifier
             
         Raises:
-            ValueError: If zone does not exist
+            ValueError: If area does not exist
         """
-        if area_id not in self.zones:
+        if area_id not in self.areas:
             raise ValueError(f"Zone {area_id} does not exist")
         
-        del self.zones[area_id]
-        _LOGGER.info("Deleted zone %s", area_id)
+        del self.areas[area_id]
+        _LOGGER.info("Deleted area %s", area_id)
 
     def get_area(self, area_id: str) -> Area | None:
-        """Get a zone by ID.
+        """Get a area by ID.
         
         Args:
             area_id: Zone identifier
@@ -424,15 +424,15 @@ class AreaManager:
         Returns:
             Zone or None if not found
         """
-        return self.zones.get(area_id)
+        return self.areas.get(area_id)
 
     def get_all_areas(self) -> dict[str, Area]:
-        """Get all zones.
+        """Get all areas.
         
         Returns:
-            Dictionary of all zones
+            Dictionary of all areas
         """
-        return self.zones
+        return self.areas
 
     def add_device_to_area(
         self,
@@ -441,7 +441,7 @@ class AreaManager:
         device_type: str,
         mqtt_topic: str | None = None,
     ) -> None:
-        """Add a device to a zone.
+        """Add a device to a area.
         
         Args:
             area_id: Zone identifier
@@ -450,7 +450,7 @@ class AreaManager:
             mqtt_topic: MQTT topic for the device
             
         Raises:
-            ValueError: If zone does not exist
+            ValueError: If area does not exist
         """
         area = self.get_area(area_id)
         if area is None:
@@ -459,14 +459,14 @@ class AreaManager:
         area.add_device(device_id, device_type, mqtt_topic)
 
     def remove_device_from_area(self, area_id: str, device_id: str) -> None:
-        """Remove a device from a zone.
+        """Remove a device from a area.
         
         Args:
             area_id: Zone identifier
             device_id: Device identifier
             
         Raises:
-            ValueError: If zone does not exist
+            ValueError: If area does not exist
         """
         area = self.get_area(area_id)
         if area is None:
@@ -475,14 +475,14 @@ class AreaManager:
         area.remove_device(device_id)
 
     def update_area_temperature(self, area_id: str, temperature: float) -> None:
-        """Update the current temperature of a zone.
+        """Update the current temperature of a area.
         
         Args:
             area_id: Zone identifier
             temperature: New temperature value
             
         Raises:
-            ValueError: If zone does not exist
+            ValueError: If area does not exist
         """
         area = self.get_area(area_id)
         if area is None:
@@ -492,14 +492,14 @@ class AreaManager:
         _LOGGER.debug("Updated area %s temperature to %.1f°C", area_id, temperature)
 
     def set_area_target_temperature(self, area_id: str, temperature: float) -> None:
-        """Set the target temperature of a zone.
+        """Set the target temperature of a area.
         
         Args:
             area_id: Zone identifier
             temperature: Target temperature
             
         Raises:
-            ValueError: If zone does not exist
+            ValueError: If area does not exist
         """
         area = self.get_area(area_id)
         if area is None:
@@ -509,13 +509,13 @@ class AreaManager:
         _LOGGER.info("Set area %s target temperature to %.1f°C", area_id, temperature)
 
     def enable_area(self, area_id: str) -> None:
-        """Enable a zone.
+        """Enable a area.
         
         Args:
             area_id: Zone identifier
             
         Raises:
-            ValueError: If zone does not exist
+            ValueError: If area does not exist
         """
         area = self.get_area(area_id)
         if area is None:
@@ -525,13 +525,13 @@ class AreaManager:
         _LOGGER.info("Enabled area %s", area_id)
 
     def disable_area(self, area_id: str) -> None:
-        """Disable a zone.
+        """Disable a area.
         
         Args:
             area_id: Zone identifier
             
         Raises:
-            ValueError: If zone does not exist
+            ValueError: If area does not exist
         """
         area = self.get_area(area_id)
         if area is None:
@@ -588,4 +588,4 @@ class AreaManager:
         
         area.remove_schedule(schedule_id)
         _LOGGER.info("Removed schedule %s from area %s", schedule_id, area_id)
-        _LOGGER.info("Disabled zone %s", area_id)
+        _LOGGER.info("Disabled area %s", area_id)
