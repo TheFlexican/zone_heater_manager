@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Box, CircularProgress, Alert, ToggleButtonGroup, ToggleButton } from '@mui/material'
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -9,7 +8,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
+  Scatter,
+  ComposedChart
 } from 'recharts'
 
 interface HistoryEntry {
@@ -90,7 +91,8 @@ const HistoryChart = ({ areaId }: HistoryChartProps) => {
     }),
     current: entry.current_temperature,
     target: entry.target_temperature,
-    heating: entry.state === 'heating' ? entry.current_temperature : null
+    // For heating indicator scatter plot
+    heatingDot: entry.state === 'heating' ? entry.current_temperature : null
   }))
 
   // Calculate average target temperature for reference line
@@ -116,7 +118,7 @@ const HistoryChart = ({ areaId }: HistoryChartProps) => {
       </Box>
 
       <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={chartData}>
+        <ComposedChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
           <XAxis 
             dataKey="time" 
@@ -171,16 +173,13 @@ const HistoryChart = ({ areaId }: HistoryChartProps) => {
             dot={false}
             name="Target Temperature"
           />
-          <Line
-            type="monotone"
-            dataKey="heating"
-            stroke="#f44336"
-            strokeWidth={3}
-            dot={{ r: 3 }}
-            connectNulls={false}
+          <Scatter
+            dataKey="heatingDot"
+            fill="#f44336"
+            shape="circle"
             name="Heating Active"
           />
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
 
       <Box sx={{ mt: 2 }}>
