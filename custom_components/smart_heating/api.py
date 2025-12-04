@@ -45,9 +45,6 @@ class SmartHeatingAPIView(HomeAssistantView):
         try:
             if endpoint == "areas":
                 return await self.get_areas(request)
-            elif endpoint.startswith("areas/"):
-                area_id = endpoint.split("/")[1]
-                return await self.get_area(request, area_id)
             elif endpoint == "devices":
                 return await self.get_devices(request)
             elif endpoint == "status":
@@ -63,6 +60,9 @@ class SmartHeatingAPIView(HomeAssistantView):
             elif endpoint.startswith("areas/") and "/learning" in endpoint:
                 area_id = endpoint.split("/")[1]
                 return await self.get_learning_stats(request, area_id)
+            elif endpoint.startswith("areas/"):
+                area_id = endpoint.split("/")[1]
+                return await self.get_area(request, area_id)
             else:
                 return web.json_response(
                     {"error": "Unknown endpoint"}, status=404
