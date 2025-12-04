@@ -743,9 +743,24 @@ custom_components/smart_heating/
 
 ## 📝 Version
 
-Current version: **0.1.0**
+Current version: **0.2.0**
 
 ### Changelog
+
+#### v0.2.0 (2025-12-04)
+- ✨ **Adaptive Learning System** - Machine learning for optimal heating start times
+  - Automatic tracking of every heating cycle with weather correlation
+  - Smart night boost: Predicts when to start heating to reach target by wake-up time
+  - Home Assistant Statistics API integration for efficient data storage
+  - Learning statistics: heating rate, cooldown rate, outdoor correlation, accuracy
+  - Frontend UI: Smart Night Boost section in Settings + new Learning tab
+  - API endpoint: `/api/smart_heating/areas/{area_id}/learning`
+  - Service parameters: `smart_night_boost_enabled`, `smart_night_boost_target_time`, `weather_entity_id`
+- 🐛 Fixed service schema validation errors for smart boost parameters
+- 🐛 Fixed method signature mismatches in learning engine calls
+- 🐛 Fixed WebSocket coordinator lookup errors
+- 📚 Comprehensive documentation for adaptive learning system
+- 🏆 Minimal performance impact with efficient database storage
 
 #### v0.1.0 (2025-12-04)
 - ✨ Area management system with Home Assistant areas integration
