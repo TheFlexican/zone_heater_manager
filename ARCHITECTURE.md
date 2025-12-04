@@ -96,15 +96,26 @@ Schedule:
 
 Device:
   - id: str
-  - type: str (thermostat/temperature_sensor/opentherm_gateway/valve)
+  - type: str (thermostat/temperature_sensor/switch/valve/opentherm_gateway)
   - mqtt_topic: Optional[str]
   - entity_id: Optional[str]
 ```
+
+**Supported Device Types:**
+- **thermostat** - Climate entities for direct heating control
+- **temperature_sensor** - External sensors for area monitoring
+- **switch** - Per-area circulation pumps/relays (NEW)
+- **valve** - TRVs with position or temperature control (NEW)
+- **opentherm_gateway** - Global boiler control (shared across areas) (NEW)
 
 **Key Methods:**
 - `get_effective_target_temperature()` - Calculates target with schedules + night boost
 - `get_active_schedule_temperature()` - Finds current active schedule
 - `add_schedule()` / `remove_schedule()` - Schedule management
+- `get_switches()` - Get switch devices in area (NEW)
+- `get_valves()` - Get valve devices in area (NEW)
+- `set_opentherm_gateway()` - Configure global OpenTherm gateway (NEW)
+- `set_trv_temperatures()` - Set TRV heating/idle temperatures (NEW)
 
 ### 2. Coordinator (`coordinator.py`)
 
@@ -117,7 +128,7 @@ Data update coordinator using Home Assistant's `DataUpdateCoordinator`.
 
 ### 3. Climate Controller (`climate_controller.py`)
 
-Automated heating control engine.
+Automated heating control engine with multi-device support.
 
 **Responsibilities:**
 - Runs every 30 seconds (via async_track_time_interval)
@@ -126,8 +137,53 @@ Automated heating control engine.
 - Records temperature history every 5 minutes (10 cycles)
 - Integrates with AreaManager for effective target temperature
 - Updates thermostat targets even when area is idle (syncs with schedules)
+- **Controls all device types in coordinated fashion (NEW)**
 
-**Logic:**
+**Device Control Methods:**
+
+1. **_async_control_thermostats()** - Standard thermostat control
+   - Sets `climate.*` entities to target temperature
+   - Works with traditional TRVs and smart thermostats
+
+2. **_async_control_switches()** - Binary switch control
+   - Turns `switch.*` entities ON when area is heating
+   - Turns OFF when area is idle
+   - Perfect for circulation pumps, zone valves, relays
+
+3. **_async_control_valves()** - Intelligent valve control
+   - **Position mode** (`number.*` entities): Direct 0-100% position control
+     - 100% open when heating
+     - 0% closed when idle
+   - **Temperature mode** (`climate.*` entities without thermostat type): High/low temp method
+     - Sets to `trv_heating_temp` (default 25°C) when heating
+     - Sets to `trv_idle_temp` (default 10°C) when idle
+     - Works with external temperature sensors
+
+4. **_async_control_opentherm_gateway()** - Global boiler control
+   - Aggregates heating demands across ALL areas
+   - Tracks which areas are actively heating
+   - Calculates maximum target temperature across all heating areas
+   - Boiler control:
+     - **ON**: When any area needs heat, setpoint = `max(area_targets) + 20°C`
+     - **OFF**: When no areas need heat
+   - Shared resource (one gateway serves all areas)
+
+**Control Flow:**
+```
+Every 30 seconds:
+1. Update all area temperatures from sensors
+2. For each area:
+   - Decide if heating needed (hysteresis logic)
+   - Control thermostats → set target temperature
+   - Control switches → on/off based on heating state
+   - Control valves → position or temperature based on capability
+   - Track if area is heating + its target temp
+3. After all areas processed:
+   - Aggregate heating demands
+   - Control OpenTherm gateway → boiler on/off + optimal setpoint
+```
+
+**Hysteresis Logic:**
 ```python
 # Hysteresis control (default 0.5°C)
 should_heat = current_temp < (target_temp - hysteresis)
@@ -260,6 +316,8 @@ Comprehensive service API for automation/script integration:
 
 **Advanced Settings:**
 10. `smart_heating.set_night_boost` - Configure night boost
+11. `smart_heating.set_opentherm_gateway` - Configure global OpenTherm gateway (NEW)
+12. `smart_heating.set_trv_temperatures` - Set TRV heating/idle temperatures (NEW)
 13. `smart_heating.set_hysteresis` - Set global hysteresis
 
 **System:**
@@ -404,13 +462,29 @@ Area updated in storage
     ↓
 Climate controller (30s interval) detects change
     ↓
-Climate controller sends climate.set_temperature to thermostats
+Climate controller processes area:
+    │
+    ├──→ Thermostats: climate.set_temperature to target
+    │
+    ├──→ Switches: switch.turn_on if heating, switch.turn_off if idle
+    │
+    ├──→ Valves:
+    │    ├──→ Position mode (number.*): Set to 100% if heating, 0% if idle
+    │    └──→ Temperature mode (climate.*): Set to heating_temp if heating, idle_temp if idle
+    │
+    └──→ Tracks heating state + target for this area
     ↓
-TRVs (Thermostatic Radiator Valves) receive target temperature
+After all areas processed:
     ↓
-TRV motor adjusts valve position (0-100%)
+Climate controller aggregates demands:
+    - heating_areas = areas currently needing heat
+    - max_target_temp = highest target across heating areas
     ↓
-TRV reports new position via MQTT
+OpenTherm Gateway Control:
+    - If any_heating: Boiler ON, setpoint = max_target_temp + 20°C
+    - If no heating: Boiler OFF
+    ↓
+Devices respond (thermostats, switches, valves, boiler)
     ↓
 Coordinator fetches updated state (30s interval)
     ↓
@@ -420,6 +494,26 @@ WebSocket pushes update to frontend
     ↓
 ZoneCard displays updated device status
 ```
+
+**Multi-Device Coordination Example:**
+
+Living Room area with target 23°C, current 20°C (needs heating):
+1. **Thermostat** → Set to 23°C
+2. **Pump Switch** → Turn ON
+3. **TRV (position mode)** → Set to 100% open
+4. **TRV (temp mode)** → Set to 25°C (heating_temp)
+5. Area tracked as heating with target 23°C
+
+Kitchen area with target 19°C, current 21°C (no heating needed):
+1. **Thermostat** → Set to 19°C (stays synced)
+2. **Pump Switch** → Turn OFF
+3. **TRV (position mode)** → Set to 0% closed
+4. **TRV (temp mode)** → Set to 10°C (idle_temp)
+5. Area tracked as idle
+
+OpenTherm Gateway (global):
+- Living Room needs heat (target 23°C), Kitchen doesn't
+- Boiler ON, setpoint = 23 + 20 = 43°C
 
 **Note on Mock Devices:**
 With mock MQTT devices, valve positions don't respond to commands since there's no physical hardware. Real TRVs would automatically adjust their valve position based on temperature commands and report back via MQTT.
