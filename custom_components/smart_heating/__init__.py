@@ -27,6 +27,7 @@ from .const import (
     DEVICE_TYPE_TEMPERATURE_SENSOR,
     DEVICE_TYPE_THERMOSTAT,
     DEVICE_TYPE_VALVE,
+    DEVICE_TYPE_SWITCH,
     DOMAIN,
     PLATFORMS,
     SERVICE_ADD_DEVICE_TO_AREA,
@@ -41,6 +42,8 @@ from .const import (
     SERVICE_DISABLE_SCHEDULE,
     SERVICE_SET_NIGHT_BOOST,
     SERVICE_SET_HYSTERESIS,
+    SERVICE_SET_OPENTHERM_GATEWAY,
+    SERVICE_SET_TRV_TEMPERATURES,
 )
 from .coordinator import SmartHeatingCoordinator
 from .area_manager import AreaManager
@@ -366,6 +369,34 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         except ValueError as err:
             _LOGGER.error("Failed to set hysteresis: %s", err)
     
+    async def async_handle_set_opentherm_gateway(call: ServiceCall) -> None:
+        """Handle the set_opentherm_gateway service call."""
+        gateway_id = call.data.get("gateway_id")
+        enabled = call.data.get("enabled", True)
+        
+        _LOGGER.debug("Setting OpenTherm gateway to %s (enabled: %s)", gateway_id, enabled)
+        
+        try:
+            area_manager.set_opentherm_gateway(gateway_id, enabled)
+            await area_manager.async_save()
+            _LOGGER.info("Set OpenTherm gateway to %s (enabled: %s)", gateway_id, enabled)
+        except ValueError as err:
+            _LOGGER.error("Failed to set OpenTherm gateway: %s", err)
+    
+    async def async_handle_set_trv_temperatures(call: ServiceCall) -> None:
+        """Handle the set_trv_temperatures service call."""
+        heating_temp = call.data.get("heating_temp", 25.0)
+        idle_temp = call.data.get("idle_temp", 10.0)
+        
+        _LOGGER.debug("Setting TRV temperatures: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)
+        
+        try:
+            area_manager.set_trv_temperatures(heating_temp, idle_temp)
+            await area_manager.async_save()
+            _LOGGER.info("Set TRV temperatures: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)
+        except ValueError as err:
+            _LOGGER.error("Failed to set TRV temperatures: %s", err)
+    
     # Service schemas
     ADD_DEVICE_SCHEMA = vol.Schema({
         vol.Required(ATTR_AREA_ID): cv.string,
@@ -375,6 +406,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
             DEVICE_TYPE_TEMPERATURE_SENSOR,
             DEVICE_TYPE_OPENTHERM_GATEWAY,
             DEVICE_TYPE_VALVE,
+            DEVICE_TYPE_SWITCH,
         ]),
     })
     
@@ -420,6 +452,16 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
         vol.Required(ATTR_HYSTERESIS): vol.Coerce(float),
     })
     
+    OPENTHERM_GATEWAY_SCHEMA = vol.Schema({
+        vol.Optional("gateway_id"): cv.string,
+        vol.Optional("enabled", default=True): cv.boolean,
+    })
+    
+    TRV_TEMPERATURES_SCHEMA = vol.Schema({
+        vol.Optional("heating_temp", default=25.0): vol.Coerce(float),
+        vol.Optional("idle_temp", default=10.0): vol.Coerce(float),
+    })
+    
     # Register all services
     hass.services.async_register(DOMAIN, SERVICE_REFRESH, async_handle_refresh)
     hass.services.async_register(DOMAIN, SERVICE_ADD_DEVICE_TO_AREA, async_handle_add_device, schema=ADD_DEVICE_SCHEMA)
@@ -433,6 +475,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: SmartHeatingCoo
     hass.services.async_register(DOMAIN, SERVICE_DISABLE_SCHEDULE, async_handle_disable_schedule, schema=SCHEDULE_CONTROL_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_NIGHT_BOOST, async_handle_set_night_boost, schema=NIGHT_BOOST_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_HYSTERESIS, async_handle_set_hysteresis, schema=HYSTERESIS_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SET_OPENTHERM_GATEWAY, async_handle_set_opentherm_gateway, schema=OPENTHERM_GATEWAY_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SET_TRV_TEMPERATURES, async_handle_set_trv_temperatures, schema=TRV_TEMPERATURES_SCHEMA)
     
     _LOGGER.debug("All services registered")
 
@@ -488,6 +532,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.services.async_remove(DOMAIN, SERVICE_DISABLE_SCHEDULE)
             hass.services.async_remove(DOMAIN, SERVICE_SET_NIGHT_BOOST)
             hass.services.async_remove(DOMAIN, SERVICE_SET_HYSTERESIS)
+            hass.services.async_remove(DOMAIN, SERVICE_SET_OPENTHERM_GATEWAY)
+            hass.services.async_remove(DOMAIN, SERVICE_SET_TRV_TEMPERATURES)
             _LOGGER.debug("Smart Heating services removed")
     
     _LOGGER.info("Smart Heating integration unloaded")

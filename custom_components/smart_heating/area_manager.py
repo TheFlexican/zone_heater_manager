@@ -17,11 +17,14 @@ from .const import (
     DEVICE_TYPE_TEMPERATURE_SENSOR,
     DEVICE_TYPE_THERMOSTAT,
     DEVICE_TYPE_VALVE,
+    DEVICE_TYPE_SWITCH,
     STATE_HEATING,
     STATE_IDLE,
     STATE_OFF,
     STORAGE_KEY,
     STORAGE_VERSION,
+    DEFAULT_TRV_HEATING_TEMP,
+    DEFAULT_TRV_IDLE_TEMP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -220,6 +223,30 @@ class Area:
             if device["type"] == DEVICE_TYPE_OPENTHERM_GATEWAY
         ]
 
+    def get_switches(self) -> list[str]:
+        """Get all switch device IDs in the area (pumps, relays, etc.).
+        
+        Returns:
+            List of switch device IDs
+        """
+        return [
+            device_id
+            for device_id, device in self.devices.items()
+            if device["type"] == DEVICE_TYPE_SWITCH
+        ]
+
+    def get_valves(self) -> list[str]:
+        """Get all valve device IDs in the area (TRVs, motorized valves).
+        
+        Returns:
+            List of valve device IDs
+        """
+        return [
+            device_id
+            for device_id, device in self.devices.items()
+            if device["type"] == DEVICE_TYPE_VALVE
+        ]
+
     def add_schedule(self, schedule: Schedule) -> None:
         """Add a schedule to the area.
         
@@ -400,6 +427,15 @@ class AreaManager:
         self.hass = hass
         self.areas: dict[str, Area] = {}
         self._store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+        
+        # Global OpenTherm gateway configuration
+        self.opentherm_gateway_id: str | None = None
+        self.opentherm_enabled: bool = False
+        
+        # Global TRV configuration
+        self.trv_heating_temp: float = DEFAULT_TRV_HEATING_TEMP
+        self.trv_idle_temp: float = DEFAULT_TRV_IDLE_TEMP
+        
         _LOGGER.debug("AreaManager initialized")
 
     async def async_load(self) -> None:
@@ -407,11 +443,19 @@ class AreaManager:
         _LOGGER.debug("Loading areas from storage")
         data = await self._store.async_load()
         
-        if data is not None and "areas" in data:
-            for area_data in data["areas"]:
-                area = Area.from_dict(area_data)
-                self.areas[area.area_id] = area
-            _LOGGER.info("Loaded %d areas from storage", len(self.areas))
+        if data is not None:
+            # Load global configuration
+            self.opentherm_gateway_id = data.get("opentherm_gateway_id")
+            self.opentherm_enabled = data.get("opentherm_enabled", False)
+            self.trv_heating_temp = data.get("trv_heating_temp", DEFAULT_TRV_HEATING_TEMP)
+            self.trv_idle_temp = data.get("trv_idle_temp", DEFAULT_TRV_IDLE_TEMP)
+            
+            # Load areas
+            if "areas" in data:
+                for area_data in data["areas"]:
+                    area = Area.from_dict(area_data)
+                    self.areas[area.area_id] = area
+                _LOGGER.info("Loaded %d areas from storage", len(self.areas))
         else:
             _LOGGER.debug("No areas found in storage")
 
@@ -419,10 +463,14 @@ class AreaManager:
         """Save areas to storage."""
         _LOGGER.debug("Saving areas to storage")
         data = {
+            "opentherm_gateway_id": self.opentherm_gateway_id,
+            "opentherm_enabled": self.opentherm_enabled,
+            "trv_heating_temp": self.trv_heating_temp,
+            "trv_idle_temp": self.trv_idle_temp,
             "areas": [area.to_dict() for area in self.areas.values()]
         }
         await self._store.async_save(data)
-        _LOGGER.info("Saved %d areas to storage", len(self.areas))
+        _LOGGER.info("Saved %d areas and global config to storage", len(self.areas))
 
     def get_area(self, area_id: str) -> Area | None:
         """Get a area by ID.
@@ -597,4 +645,25 @@ class AreaManager:
         
         area.remove_schedule(schedule_id)
         _LOGGER.info("Removed schedule %s from area %s", schedule_id, area_id)
-        _LOGGER.info("Disabled area %s", area_id)
+
+    def set_opentherm_gateway(self, gateway_id: str | None, enabled: bool = True) -> None:
+        """Set the global OpenTherm gateway.
+        
+        Args:
+            gateway_id: Entity ID of the OpenTherm gateway climate entity (or None to disable)
+            enabled: Whether to enable OpenTherm control
+        """
+        self.opentherm_gateway_id = gateway_id
+        self.opentherm_enabled = enabled and gateway_id is not None
+        _LOGGER.info("OpenTherm gateway set to %s (enabled: %s)", gateway_id, self.opentherm_enabled)
+
+    def set_trv_temperatures(self, heating_temp: float, idle_temp: float) -> None:
+        """Set global TRV temperature limits for areas without position control.
+        
+        Args:
+            heating_temp: Temperature to set when heating (default 25°C)
+            idle_temp: Temperature to set when idle (default 10°C)
+        """
+        self.trv_heating_temp = heating_temp
+        self.trv_idle_temp = idle_temp
+        _LOGGER.info("TRV temperatures set: heating=%.1f°C, idle=%.1f°C", heating_temp, idle_temp)

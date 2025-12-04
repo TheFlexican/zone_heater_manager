@@ -30,6 +30,8 @@ SERVICE_ENABLE_SCHEDULE: Final = "enable_schedule"
 SERVICE_DISABLE_SCHEDULE: Final = "disable_schedule"
 SERVICE_SET_NIGHT_BOOST: Final = "set_night_boost"
 SERVICE_SET_HYSTERESIS: Final = "set_hysteresis"
+SERVICE_SET_OPENTHERM_GATEWAY: Final = "set_opentherm_gateway"
+SERVICE_SET_TRV_TEMPERATURES: Final = "set_trv_temperatures"
 
 # Sensor states
 STATE_INITIALIZED: Final = "initialized"
@@ -42,6 +44,7 @@ DEVICE_TYPE_THERMOSTAT: Final = "thermostat"
 DEVICE_TYPE_TEMPERATURE_SENSOR: Final = "temperature_sensor"
 DEVICE_TYPE_OPENTHERM_GATEWAY: Final = "opentherm_gateway"
 DEVICE_TYPE_VALVE: Final = "valve"
+DEVICE_TYPE_SWITCH: Final = "switch"
 
 # Platforms
 PLATFORMS: Final = ["sensor", "climate", "switch"]
@@ -60,6 +63,16 @@ ATTR_TARGET_TEMPERATURE: Final = "target_temperature"
 ATTR_CURRENT_TEMPERATURE: Final = "current_temperature"
 ATTR_ENABLED: Final = "enabled"
 ATTR_DEVICES: Final = "devices"
+
+# Global OpenTherm Gateway
+ATTR_OPENTHERM_GATEWAY: Final = "opentherm_gateway"
+ATTR_OPENTHERM_ENABLED: Final = "opentherm_enabled"
+
+# TRV Configuration
+ATTR_TRV_HEATING_TEMP: Final = "trv_heating_temp"
+ATTR_TRV_IDLE_TEMP: Final = "trv_idle_temp"
+DEFAULT_TRV_HEATING_TEMP: Final = 25.0
+DEFAULT_TRV_IDLE_TEMP: Final = 10.0
 ATTR_SCHEDULE_ID: Final = "schedule_id"
 ATTR_TIME: Final = "time"
 ATTR_DAYS: Final = "days"

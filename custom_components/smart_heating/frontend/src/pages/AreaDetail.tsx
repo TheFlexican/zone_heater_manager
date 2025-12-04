@@ -33,6 +33,7 @@ import { Zone, Device } from '../types'
 import { getZones, getDevices, setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
 import HistoryChart from '../components/HistoryChart'
+import { useWebSocket } from '../hooks/useWebSocket'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -64,6 +65,23 @@ const ZoneDetail = () => {
   const [loading, setLoading] = useState(true)
   const [tabValue, setTabValue] = useState(0)
   const [temperature, setTemperature] = useState(21)
+
+  // WebSocket for real-time updates
+  useWebSocket({
+    onZoneUpdate: (updatedZone) => {
+      if (updatedZone.id === areaId) {
+        setZone(updatedZone)
+        setTemperature(updatedZone.target_temperature)
+      }
+    },
+    onZonesUpdate: (areas) => {
+      const currentZone = areas.find(z => z.id === areaId)
+      if (currentZone) {
+        setZone(currentZone)
+        setTemperature(currentZone.target_temperature)
+      }
+    },
+  })
 
   useEffect(() => {
     loadData()
