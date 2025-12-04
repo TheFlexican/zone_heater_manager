@@ -21,6 +21,8 @@ import SensorsIcon from '@mui/icons-material/Sensors'
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import AcUnitIcon from '@mui/icons-material/AcUnit'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
+import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew'
+import TuneIcon from '@mui/icons-material/Tune'
 import { Zone } from '../types'
 import { setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
 
@@ -114,6 +116,57 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
       default:
         return <ThermostatIcon />
     }
+  }
+
+  const getDeviceStatusIcon = (device: any) => {
+    if (device.type === 'thermostat') {
+      if (device.hvac_action === 'heating') {
+        return <LocalFireDepartmentIcon fontSize="small" sx={{ color: 'error.main' }} />
+      } else if (device.state === 'heat') {
+        return <ThermostatIcon fontSize="small" sx={{ color: 'primary.main' }} />
+      } else {
+        return <AcUnitIcon fontSize="small" sx={{ color: 'info.main' }} />
+      }
+    } else if (device.type === 'valve') {
+      return <TuneIcon fontSize="small" sx={{ color: device.position > 0 ? 'warning.main' : 'text.secondary' }} />
+    } else if (device.type === 'temperature_sensor') {
+      return <SensorsIcon fontSize="small" sx={{ color: 'success.main' }} />
+    } else {
+      return <PowerSettingsNewIcon fontSize="small" sx={{ color: device.state === 'on' ? 'success.main' : 'text.secondary' }} />
+    }
+  }
+
+  const getDeviceStatusText = (device: any) => {
+    const parts = []
+    
+    if (device.type === 'thermostat') {
+      if (device.hvac_action) {
+        parts.push(device.hvac_action)
+      }
+      if (device.current_temperature !== undefined) {
+        parts.push(`${device.current_temperature}°C`)
+      }
+      if (device.target_temperature !== undefined && device.target_temperature !== device.current_temperature) {
+        parts.push(`→ ${device.target_temperature}°C`)
+      }
+    } else if (device.type === 'temperature_sensor') {
+      if (device.temperature !== undefined) {
+        parts.push(`${device.temperature}°C`)
+      }
+    } else if (device.type === 'valve') {
+      if (device.position !== undefined) {
+        parts.push(`${device.position}%`)
+      }
+      if (device.state) {
+        parts.push(device.state)
+      }
+    } else {
+      if (device.state) {
+        parts.push(device.state)
+      }
+    }
+    
+    return parts.length > 0 ? parts.join(' · ') : device.type.replace(/_/g, ' ')
   }
 
   return (
@@ -222,13 +275,16 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
                   </IconButton>
                 }
               >
+                <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                  {getDeviceStatusIcon(device)}
+                </Box>
                 <ListItemText
                   primary={device.name || device.id}
                   primaryTypographyProps={{ 
                     variant: 'body2',
                     color: 'text.primary'
                   }}
-                  secondary={device.type.replace(/_/g, ' ')}
+                  secondary={getDeviceStatusText(device)}
                   secondaryTypographyProps={{
                     variant: 'caption',
                     color: 'text.secondary'
