@@ -44,6 +44,10 @@ class ClimateController:
     def _get_valve_capability(self, entity_id: str) -> dict[str, Any]:
         """Get valve control capabilities from HA entity.
         
+        IMPORTANT: This method uses ZERO hardcoded device models or manufacturers.
+        It queries Home Assistant entity attributes at runtime to determine capabilities.
+        Works with ANY valve from ANY manufacturer (TuYa, Danfoss, Eurotronic, Sonoff, etc.).
+        
         Queries the entity's attributes and supported features to determine:
         - Whether it supports position control (via number.* or position attribute)
         - Whether it only supports temperature control

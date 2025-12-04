@@ -27,14 +27,17 @@ A Home Assistant custom integration for managing multi-area heating systems with
 - **Thermostat** - Room thermostats for direct temperature control
 - **Temperature Sensor** - External temperature measurement for area monitoring
 - **Valve/TRV** - Smart radiator valves with **dynamic capability detection**
-  - System queries Home Assistant entity attributes to determine control mode:
-    - **Position control** (`number.*` or `climate.*` with `position` attribute): Direct 0-100% valve opening
-    - **Temperature control** (fallback for `climate.*` without position): Uses high/low temp method
-  - Examples:
-    - **TS0601 _TZE200_b6wax7g0** (temp-only): Sets to `target+10°C` when heating, `10°C` when idle
-    - **TS0601 with position support**: Opens to 100% when heating, 0% when idle
-  - Works with external sensors (e.g., **TS0201** temperature/humidity sensor)
-- **Switch** - Circulation pumps, relays, or zone valves
+  - **No device-specific code** - System queries Home Assistant entity attributes at runtime
+  - **Works with ANY valve model** from any manufacturer
+  - Control mode determined by entity capabilities:
+    - **Position control**: Entity has `number.*` domain OR `climate.*` with `position` attribute
+    - **Temperature control**: Entity has `climate.*` domain with `temperature` attribute
+  - Examples (for reference only, not hardcoded):
+    - TuYa, Danfoss, Eurotronic, Sonoff, or any other TRV brand
+    - Position-controlled valves: Opens to max when heating, min when idle
+    - Temperature-controlled valves: Sets to `target+offset` when heating, `idle_temp` when idle
+  - Works with any external sensor brand
+- **Switch** - Circulation pumps, relays, or zone valves (any brand)
   - Automatically turns ON when area needs heating
   - Automatically turns OFF when area is idle
 

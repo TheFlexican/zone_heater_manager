@@ -288,7 +288,7 @@ set_opentherm_gateway:
 
 set_trv_temperatures:
   name: Set TRV Temperatures
-  description: Configure global settings for temperature-controlled TRVs (valves without position control). System dynamically detects device capabilities.
+  description: Configure global settings for temperature-controlled TRVs. System queries device capabilities at runtime - NO hardcoded device models. Works with ANY TRV brand.
   fields:
     heating_temp:
       name: Heating Temperature
