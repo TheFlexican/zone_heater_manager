@@ -204,9 +204,64 @@ class ZoneHeaterAPIView(HomeAssistantView):
         Returns:
             JSON response with available devices
         """
-        # TODO: Implement MQTT device discovery
-        # For now, return empty list
         devices = []
+        
+        # Get all MQTT entities from Home Assistant
+        entity_registry = self.hass.helpers.entity_registry.async_get(self.hass)
+        
+        # Find entities that are from MQTT and could be heating-related
+        heating_platforms = ["climate", "sensor", "number", "switch"]
+        
+        for entity in entity_registry.entities.values():
+            # Check if entity is from MQTT integration
+            if entity.platform == "mqtt":
+                # Get entity state for additional info
+                state = self.hass.states.get(entity.entity_id)
+                if not state:
+                    continue
+                
+                # Determine device type based on entity domain and attributes
+                device_type = "temperature_sensor"  # default
+                
+                if entity.domain == "climate":
+                    device_type = "thermostat"
+                elif entity.domain == "sensor":
+                    # Check if it's a temperature sensor
+                    unit = state.attributes.get("unit_of_measurement", "")
+                    if "°C" in unit or "°F" in unit or "temperature" in entity.entity_id.lower():
+                        device_type = "temperature_sensor"
+                    else:
+                        continue  # Skip non-temperature sensors
+                elif entity.domain == "number" and "valve" in entity.entity_id.lower():
+                    device_type = "valve"
+                elif entity.domain == "switch" and any(keyword in entity.entity_id.lower() 
+                                                       for keyword in ["thermostat", "heater", "radiator"]):
+                    device_type = "thermostat"
+                else:
+                    # Skip entities that don't match heating domains
+                    if entity.domain not in heating_platforms:
+                        continue
+                
+                # Check if device is already assigned to a zone
+                assigned_zones = []
+                for zone_id, zone in self.zone_manager.get_all_zones().items():
+                    if entity.entity_id in zone.devices:
+                        assigned_zones.append(zone_id)
+                
+                devices.append({
+                    "id": entity.entity_id,
+                    "name": state.attributes.get("friendly_name", entity.entity_id),
+                    "type": device_type,
+                    "entity_id": entity.entity_id,
+                    "domain": entity.domain,
+                    "assigned_zones": assigned_zones,
+                    "state": state.state,
+                    "attributes": {
+                        "temperature": state.attributes.get("temperature"),
+                        "current_temperature": state.attributes.get("current_temperature"),
+                        "unit_of_measurement": state.attributes.get("unit_of_measurement"),
+                    }
+                })
         
         return web.json_response({"devices": devices})
 
