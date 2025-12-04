@@ -116,6 +116,14 @@ See `src/types.ts` for all interface definitions:
 - Temperature limits display
 - Real-time service calls
 
+### Device Status Display
+- **Thermostats**: Show "20.0°C → 22.0°C" when heating (target > current)
+- **Temperature Sensors**: Show "19.5°C" from temperature attribute
+- **Valves**: Show "45%" position without redundant state
+- **Fallback**: Shows "unavailable" when no data available
+- Color-coded icons for instant visual feedback
+- Real-time updates via WebSocket and coordinator (30s)
+
 ### Drag & Drop
 - Drag devices from panel to area cards
 - Visual feedback on drop targets

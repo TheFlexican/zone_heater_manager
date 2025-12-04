@@ -20,6 +20,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### ✨ Added
+- **Unified Schedule Format**: Schedule model now supports both legacy and new formats
+  - Frontend format (day, start_time, end_time) matches backend storage
+  - Automatic conversion between day names (Monday) and abbreviations (mon)
+  - Backward compatible with old format (time, days)
+  - Schedule creation from frontend now works seamlessly
+
+### 🐛 Fixed
+- **Device Status Display**: Fixed device status text in area cards
+  - Thermostats now show "20.0°C → 22.0°C" only when heating (target > current)
+  - Temperature sensors show "19.5°C" from temperature attribute
+  - Valves show "45%" without redundant state value
+  - All devices show "unavailable" instead of type name when no data
+- **Scheduler Object Access**: Fixed scheduler to work with Schedule objects instead of dicts
+  - Changed from `schedule["day"]` to `schedule.day`
+  - Changed from `schedules` list to `schedules.values()` dict iteration
+- **Thermostat Target Sync**: Climate controller now updates thermostat targets even when area is idle
+  - Ensures TRV displays match scheduled temperatures
+  - Passes target_temp to `_async_set_area_heating` in both heating and idle states
+
+### 🔧 Changed
+- **Temperature Conversion**: Added Fahrenheit to Celsius conversion in coordinator
+  - Mock temperature sensors reporting 67.1°F now display as 19.5°C
+  - Conversion applied before display and climate control logic
+
+### 📚 Documentation
+- Updated README with current v0.1.0 changelog and architecture section
+- Added device control flow diagram explaining TRV behavior
+- Updated schedule API documentation with new format
+- Added note about mock devices vs real TRVs
+
+## [Unreleased]
+
+### ✨ Added
 - **Device Status Display in Area Cards**: Area overview now shows real-time device information
   - **Thermostats**: Display HVAC action (heating/idle), current temperature, and target temperature
     - Red flame icon when actively heating

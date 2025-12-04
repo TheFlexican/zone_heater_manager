@@ -85,10 +85,14 @@ Area:
 
 Schedule:
   - schedule_id: str
-  - time: str (HH:MM)
+  - time: str (HH:MM) [legacy]
+  - day: str (Monday, Tuesday, etc.) [new format]
+  - start_time: str (HH:MM) [new format]
+  - end_time: str (HH:MM) [new format]
   - temperature: float
-  - days: List[str] (mon, tue, etc.)
+  - days: List[str] (mon, tue, etc.) [legacy]
   - enabled: bool
+  # Note: Supports both old and new formats with automatic conversion
 
 Device:
   - id: str
@@ -117,10 +121,11 @@ Automated heating control engine.
 
 **Responsibilities:**
 - Runs every 30 seconds (via async_track_time_interval)
-- Updates area temperatures from sensors
+- Updates area temperatures from sensors (with F→C conversion)
 - Controls heating based on hysteresis logic
 - Records temperature history every 5 minutes (10 cycles)
 - Integrates with AreaManager for effective target temperature
+- Updates thermostat targets even when area is idle (syncs with schedules)
 
 **Logic:**
 ```python
@@ -393,16 +398,31 @@ api.setZoneTemperature() calls POST /api/.../temperature
     ↓
 ZoneHeaterAPIView.post() routes to set_temperature()
     ↓
-area_manager.async_set_area_temperature()
+area_manager.set_area_target_temperature()
     ↓
 Area updated in storage
     ↓
-Climate entity receives update
+Climate controller (30s interval) detects change
     ↓
-MQTT commands sent to devices (via climate entity)
+Climate controller sends climate.set_temperature to thermostats
     ↓
-Physical devices adjust
+TRVs (Thermostatic Radiator Valves) receive target temperature
+    ↓
+TRV motor adjusts valve position (0-100%)
+    ↓
+TRV reports new position via MQTT
+    ↓
+Coordinator fetches updated state (30s interval)
+    ↓
+[F°→C° conversion applied if needed]
+    ↓
+WebSocket pushes update to frontend
+    ↓
+ZoneCard displays updated device status
 ```
+
+**Note on Mock Devices:**
+With mock MQTT devices, valve positions don't respond to commands since there's no physical hardware. Real TRVs would automatically adjust their valve position based on temperature commands and report back via MQTT.
 
 ## Storage
 

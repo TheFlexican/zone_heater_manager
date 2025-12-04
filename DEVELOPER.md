@@ -188,6 +188,24 @@ class Area:
     def to_dict() -> dict
 ```
 
+### Schedule Class (`area_manager.py`)
+
+```python
+class Schedule:
+    schedule_id: str
+    time: str  # HH:MM (legacy)
+    day: str  # Monday, Tuesday, etc. (new)
+    start_time: str  # HH:MM (new)
+    end_time: str  # HH:MM (new)
+    temperature: float
+    days: List[str]  # ["mon", "tue"] (legacy)
+    enabled: bool
+    
+    # Note: __init__ accepts both formats and converts between them
+    # to_dict() returns new format (day, start_time, end_time)
+    # from_dict() accepts both formats
+```
+
 ### ZoneManager Class (`area_manager.py`)
 
 ```python
