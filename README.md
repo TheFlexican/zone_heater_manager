@@ -1165,6 +1165,28 @@ Current version: **0.3.3**
 
 ### Changelog
 
+#### v0.3.13 (2025-12-05)
+**Enhanced Hidden Area Device Filtering**
+
+- 🎯 **Comprehensive Device Filtering**
+  - Devices now filtered from Available Devices list in multiple ways:
+    - Devices directly assigned to hidden Smart Heating areas
+    - Devices whose Home Assistant area matches a hidden Smart Heating area
+    - Devices whose entity_id or friendly_name contains a hidden area name
+  - Catches all bedroom/hidden area devices regardless of HA area assignment
+  - Perfect for MQTT devices without explicit HA area configuration
+  - Keeps Available Devices panel completely clean of hidden area devices
+
+- 🔄 **Device Refresh Fix**
+  - Fixed 500 error when clicking refresh button
+  - Removed invalid coordinator reference from API view
+  - Refresh now works properly to sync devices from Home Assistant
+
+- 📍 **Device Location Display (v0.3.10)**
+  - Available devices show their Home Assistant area assignment
+  - Location displayed with 📍 icon below device type
+  - Helps identify device physical locations when dragging to areas
+
 #### v0.3.12 (2025-12-05)
 **Filter Hidden Area Devices**
 
