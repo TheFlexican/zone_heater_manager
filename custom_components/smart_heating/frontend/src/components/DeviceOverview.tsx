@@ -23,9 +23,14 @@ interface DeviceOverviewProps {
 }
 
 const DeviceOverview = ({ areas }: DeviceOverviewProps) => {
-  const getDeviceStatusIcon = (device: any) => {
+  const getDeviceStatusIcon = (device: any, areaTarget?: number) => {
     if (device.type === 'thermostat') {
-      if (device.hvac_action === 'heating') {
+      // Use area target temperature comparison instead of stale hvac_action
+      const shouldHeat = areaTarget !== undefined && 
+                        device.current_temperature !== undefined && 
+                        areaTarget > device.current_temperature
+      
+      if (shouldHeat) {
         return <LocalFireDepartmentIcon fontSize="small" sx={{ color: 'error.main' }} />
       } else if (device.state === 'heat') {
         return <ThermostatIcon fontSize="small" sx={{ color: 'primary.main' }} />
@@ -41,12 +46,13 @@ const DeviceOverview = ({ areas }: DeviceOverviewProps) => {
     }
   }
 
-  const getDeviceStatus = (device: any) => {
+  const getDeviceStatus = (device: any, areaTarget?: number) => {
     if (device.type === 'thermostat') {
-      if (device.hvac_action) {
-        return device.hvac_action
-      }
-      return device.state || 'unknown'
+      // Use area target temperature comparison instead of hvac_action
+      const shouldHeat = areaTarget !== undefined && 
+                        device.current_temperature !== undefined && 
+                        areaTarget > device.current_temperature
+      return shouldHeat ? 'heating' : 'idle'
     } else if (device.type === 'temperature_sensor') {
       if (device.temperature !== undefined && device.temperature !== null) {
         return `${device.temperature.toFixed(1)}°C`
@@ -62,15 +68,16 @@ const DeviceOverview = ({ areas }: DeviceOverviewProps) => {
     }
   }
 
-  const getDeviceDetails = (device: any) => {
+  const getDeviceDetails = (device: any, areaTarget?: number) => {
     const parts = []
     
     if (device.type === 'thermostat') {
       if (device.current_temperature !== undefined && device.current_temperature !== null) {
         parts.push(`Current: ${device.current_temperature.toFixed(1)}°C`)
       }
-      if (device.target_temperature !== undefined && device.target_temperature !== null) {
-        parts.push(`Target: ${device.target_temperature.toFixed(1)}°C`)
+      // Use area target instead of device's stale target
+      if (areaTarget !== undefined && areaTarget !== null) {
+        parts.push(`Target: ${areaTarget.toFixed(1)}°C`)
       }
     }
     
@@ -81,7 +88,8 @@ const DeviceOverview = ({ areas }: DeviceOverviewProps) => {
     area.devices.map(device => ({
       ...device,
       areaName: area.name,
-      areaId: area.id
+      areaId: area.id,
+      areaTarget: area.target_temperature
     }))
   )
 
@@ -124,7 +132,7 @@ const DeviceOverview = ({ areas }: DeviceOverviewProps) => {
               <TableRow key={`${device.areaId}-${device.id}`} hover>
                 <TableCell>
                   <Box display="flex" alignItems="center" gap={1}>
-                    {getDeviceStatusIcon(device)}
+                    {getDeviceStatusIcon(device, device.areaTarget)}
                     <Typography variant="body2">
                       {device.name || device.id}
                     </Typography>
@@ -144,10 +152,13 @@ const DeviceOverview = ({ areas }: DeviceOverviewProps) => {
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={getDeviceStatus(device)}
+                    label={getDeviceStatus(device, device.areaTarget)}
                     size="small"
                     color={
-                      device.type === 'thermostat' && device.hvac_action === 'heating' ? 'error' :
+                      device.type === 'thermostat' && 
+                      device.areaTarget !== undefined && 
+                      device.current_temperature !== undefined && 
+                      device.areaTarget > device.current_temperature ? 'error' :
                       device.state === 'on' ? 'success' :
                       'default'
                     }
@@ -155,7 +166,7 @@ const DeviceOverview = ({ areas }: DeviceOverviewProps) => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="caption" color="text.secondary">
-                    {getDeviceDetails(device)}
+                    {getDeviceDetails(device, device.areaTarget)}
                   </Typography>
                 </TableCell>
               </TableRow>

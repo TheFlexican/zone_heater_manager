@@ -1080,11 +1080,37 @@ custom_components/smart_heating/
 
 ## 📝 Version
 
-Current version: **0.3.0**
+Current version: **0.3.1**
 
 ### Changelog
 
+#### v0.3.1 (2025-12-05)
+**UI/UX Improvements and Real-time Updates**
+
+- 🎨 **UI Enhancements**
+  - Moved area enable/disable toggle from area cards to area detail page header
+  - Added descriptive labels ("Heating Active" / "Heating Disabled") next to toggle
+  - Cleaner area card layout with focus on temperature and status
+- 🔄 **Real-time Device Status Updates**
+  - Fixed device status to use area target temperature instead of stale device attributes
+  - Device heating indicators now update instantly via WebSocket
+  - Removed dependency on slow-updating `hvac_action` attribute from thermostats
+  - All views (Area Detail, Zone Cards, Device Overview) now show accurate heating status
+- 🐛 **Bug Fixes**
+  - Fixed 500 errors on `/enable`, `/disable`, and `/temperature` endpoints
+  - Added "learning_engine" to coordinator exclusion lists
+  - Fixed JSON parsing error when calling endpoints without request body
+  - Reorganized API endpoint handling to parse JSON only when needed
+- ⚡ **Performance**
+  - Device status changes reflect immediately without waiting for entity state sync
+  - Improved WebSocket update handling across all components
+- 📚 **Technical Details**
+  - Device heating status now calculated from: `area.target_temperature > device.current_temperature`
+  - Frontend components use area target temperature for all heating decisions
+  - Mock/test devices will show static temperatures (expected behavior in test environments)
+
 #### v0.3.0 (2025-12-05)
+**Advanced Heating Features Release**
 - ✨ **Preset Modes** - 8 quick temperature presets (AWAY, ECO, COMFORT, HOME, SLEEP, ACTIVITY, BOOST, NONE)
   - Per-area preset temperatures with customizable defaults
   - Service: `smart_heating.set_preset_mode`

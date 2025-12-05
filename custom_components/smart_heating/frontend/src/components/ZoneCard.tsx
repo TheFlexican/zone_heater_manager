@@ -8,7 +8,6 @@ import {
   Box,
   Chip,
   Slider,
-  Switch,
   Menu,
   ListItemText,
   List,
@@ -25,7 +24,7 @@ import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew'
 import TuneIcon from '@mui/icons-material/Tune'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { Zone } from '../types'
-import { setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
+import { setZoneTemperature, removeDeviceFromZone } from '../api'
 
 interface ZoneCardProps {
   area: Zone
@@ -48,20 +47,6 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
 
   const handleCardClick = () => {
     navigate(`/area/${area.id}`)
-  }
-
-  const handleToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    event.stopPropagation()
-    try {
-      if (area.enabled) {
-        await disableZone(area.id)
-      } else {
-        await enableZone(area.id)
-      }
-      onUpdate()
-    } catch (error) {
-      console.error('Failed to toggle area:', error)
-    }
   }
 
   const handleTemperatureChange = async (event: Event, value: number | number[]) => {
@@ -204,12 +189,7 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
               size="small"
             />
           </Box>
-          <Box>
-            <Switch
-              checked={area.enabled}
-              onChange={handleToggle}
-              color="primary"
-            />
+          <Box onClick={(e) => e.stopPropagation()}>
             <IconButton size="small" onClick={handleMenuOpen}>
               <MoreVertIcon />
             </IconButton>

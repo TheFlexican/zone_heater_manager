@@ -183,7 +183,12 @@ const ZoneDetail = () => {
 
   const getDeviceStatusIcon = (device: any) => {
     if (device.type === 'thermostat') {
-      if (device.hvac_action === 'heating') {
+      // Check if should be heating based on area target temperature (not device's stale target)
+      const shouldHeat = area && area.target_temperature !== undefined && 
+                        device.current_temperature !== undefined && 
+                        area.target_temperature > device.current_temperature
+      
+      if (shouldHeat) {
         return <LocalFireDepartmentIcon fontSize="small" sx={{ color: 'error.main' }} />
       } else if (device.state === 'heat') {
         return <ThermostatIcon fontSize="small" sx={{ color: 'primary.main' }} />
@@ -202,14 +207,14 @@ const ZoneDetail = () => {
   const getDeviceStatus = (device: any) => {
     if (device.type === 'thermostat') {
       const parts = []
-      if (device.hvac_action) {
-        parts.push(device.hvac_action.toUpperCase())
-      }
       if (device.current_temperature !== undefined && device.current_temperature !== null) {
         parts.push(`${device.current_temperature.toFixed(1)}°C`)
       }
-      if (device.target_temperature !== undefined && device.target_temperature !== null) {
-        parts.push(`→ ${device.target_temperature.toFixed(1)}°C`)
+      // Use area target temperature instead of device's stale target
+      if (area && area.target_temperature !== undefined && area.target_temperature !== null && 
+          device.current_temperature !== undefined && device.current_temperature !== null &&
+          area.target_temperature > device.current_temperature) {
+        parts.push(`→ ${area.target_temperature.toFixed(1)}°C`)
       }
       return parts.length > 0 ? parts.join(' · ') : device.state || 'unknown'
     } else if (device.type === 'temperature_sensor') {
@@ -298,7 +303,15 @@ const ZoneDetail = () => {
               </Box>
             </Box>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mr: 2 }}>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="body2" color="text.primary">
+                {area.enabled ? 'Heating Active' : 'Heating Disabled'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {area.enabled ? 'Area is being controlled' : 'No temperature control'}
+              </Typography>
+            </Box>
             <Switch checked={area.enabled} onChange={handleToggle} color="primary" />
           </Box>
         </Box>
@@ -402,11 +415,14 @@ const ZoneDetail = () => {
                             <Typography variant="body1" color="text.primary">
                               {device.name || device.id}
                             </Typography>
-                            {device.type === 'thermostat' && device.hvac_action && (
+                            {device.type === 'thermostat' && area && 
+                             area.target_temperature !== undefined && 
+                             device.current_temperature !== undefined && 
+                             area.target_temperature > device.current_temperature && (
                               <Chip 
-                                label={device.hvac_action} 
+                                label="heating" 
                                 size="small" 
-                                color={device.hvac_action === 'heating' ? 'error' : 'info'}
+                                color="error"
                                 sx={{ height: 20, fontSize: '0.7rem' }}
                               />
                             )}

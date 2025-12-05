@@ -85,6 +85,19 @@ class SmartHeatingAPIView(HomeAssistantView):
         """
         try:
             _LOGGER.debug("POST request to endpoint: %s", endpoint)
+            
+            # Handle endpoints that don't require a body first
+            if endpoint.startswith("areas/") and endpoint.endswith("/enable"):
+                area_id = endpoint.split("/")[1]
+                return await self.enable_area(request, area_id)
+            elif endpoint.startswith("areas/") and endpoint.endswith("/disable"):
+                area_id = endpoint.split("/")[1]
+                return await self.disable_area(request, area_id)
+            elif endpoint.startswith("areas/") and endpoint.endswith("/cancel_boost"):
+                area_id = endpoint.split("/")[1]
+                return await self.cancel_boost(request, area_id)
+            
+            # Parse JSON for endpoints that need it
             data = await request.json()
             _LOGGER.debug("POST data: %s", data)
             
@@ -97,21 +110,15 @@ class SmartHeatingAPIView(HomeAssistantView):
             elif endpoint.startswith("areas/") and endpoint.endswith("/temperature"):
                 area_id = endpoint.split("/")[1]
                 return await self.set_temperature(request, area_id, data)
-            elif endpoint.startswith("areas/") and endpoint.endswith("/enable"):
-                area_id = endpoint.split("/")[1]
-                return await self.enable_area(request, area_id)
-            elif endpoint.startswith("areas/") and endpoint.endswith("/disable"):
-                area_id = endpoint.split("/")[1]
-                return await self.disable_area(request, area_id)
             elif endpoint.startswith("areas/") and endpoint.endswith("/preset_mode"):
                 area_id = endpoint.split("/")[1]
                 return await self.set_preset_mode(request, area_id, data)
             elif endpoint.startswith("areas/") and endpoint.endswith("/boost"):
                 area_id = endpoint.split("/")[1]
                 return await self.set_boost_mode(request, area_id, data)
-            elif endpoint.startswith("areas/") and endpoint.endswith("/cancel_boost"):
+            elif endpoint.startswith("areas/") and endpoint.endswith("/boost"):
                 area_id = endpoint.split("/")[1]
-                return await self.cancel_boost(request, area_id)
+                return await self.set_boost_mode(request, area_id, data)
             elif endpoint.startswith("areas/") and endpoint.endswith("/window_sensors"):
                 area_id = endpoint.split("/")[1]
                 return await self.add_window_sensor(request, area_id, data)
@@ -549,7 +556,7 @@ class SmartHeatingAPIView(HomeAssistantView):
             # Refresh coordinator to notify websocket listeners
             entry_ids = [
                 key for key in self.hass.data[DOMAIN].keys()
-                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub"]
+                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub", "learning_engine"]
             ]
             if entry_ids:
                 coordinator = self.hass.data[DOMAIN][entry_ids[0]]
@@ -585,7 +592,7 @@ class SmartHeatingAPIView(HomeAssistantView):
             # Refresh coordinator
             entry_ids = [
                 key for key in self.hass.data[DOMAIN].keys()
-                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub"]
+                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub", "learning_engine"]
             ]
             if entry_ids:
                 coordinator = self.hass.data[DOMAIN][entry_ids[0]]
@@ -619,7 +626,7 @@ class SmartHeatingAPIView(HomeAssistantView):
             # Refresh coordinator
             entry_ids = [
                 key for key in self.hass.data[DOMAIN].keys()
-                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub"]
+                if key not in ["history", "climate_controller", "schedule_executor", "climate_unsub", "learning_engine"]
             ]
             if entry_ids:
                 coordinator = self.hass.data[DOMAIN][entry_ids[0]]
