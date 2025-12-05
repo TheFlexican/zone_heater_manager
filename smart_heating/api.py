@@ -53,6 +53,8 @@ class SmartHeatingAPIView(HomeAssistantView):
                 return await self.get_config(request)
             elif endpoint == "history/config":
                 return await self.get_history_config(request)
+            elif endpoint == "entities/binary_sensor":
+                return await self.get_binary_sensor_entities(request)
             elif endpoint.startswith("entity_state/"):
                 entity_id = endpoint.replace("entity_state/", "")
                 return await self.get_entity_state(request, entity_id)
@@ -453,6 +455,31 @@ class SmartHeatingAPIView(HomeAssistantView):
             "last_changed": state.last_changed.isoformat(),
             "last_updated": state.last_updated.isoformat(),
         })
+
+    async def get_binary_sensor_entities(self, request: web.Request) -> web.Response:
+        """Get all binary sensor entities from Home Assistant.
+        
+        Args:
+            request: Request object
+            
+        Returns:
+            JSON response with list of binary sensor entities
+        """
+        entities = []
+        
+        for entity_id in self.hass.states.async_entity_ids("binary_sensor"):
+            state = self.hass.states.get(entity_id)
+            if state:
+                entities.append({
+                    "entity_id": entity_id,
+                    "state": state.state,
+                    "attributes": {
+                        "friendly_name": state.attributes.get("friendly_name", entity_id),
+                        "device_class": state.attributes.get("device_class"),
+                    }
+                })
+        
+        return web.json_response({"entities": entities})
 
     async def add_device(
         self, request: web.Request, area_id: str, data: dict
@@ -1009,7 +1036,7 @@ class SmartHeatingAPIView(HomeAssistantView):
         Args:
             request: Request object
             area_id: Area identifier
-            data: Request data with entity_id
+            data: Request data with configuration
             
         Returns:
             JSON response
@@ -1025,7 +1052,11 @@ class SmartHeatingAPIView(HomeAssistantView):
             if not area:
                 raise ValueError(f"Area {area_id} not found")
             
-            area.add_window_sensor(entity_id)
+            # Extract configuration parameters
+            action_when_open = data.get("action_when_open", "reduce_temperature")
+            temp_drop = data.get("temp_drop")
+            
+            area.add_window_sensor(entity_id, action_when_open, temp_drop)
             await self.area_manager.async_save()
             
             # Refresh coordinator
@@ -1087,7 +1118,7 @@ class SmartHeatingAPIView(HomeAssistantView):
         Args:
             request: Request object
             area_id: Area identifier
-            data: Request data with entity_id
+            data: Request data with configuration
             
         Returns:
             JSON response
@@ -1103,7 +1134,19 @@ class SmartHeatingAPIView(HomeAssistantView):
             if not area:
                 raise ValueError(f"Area {area_id} not found")
             
-            area.add_presence_sensor(entity_id)
+            # Extract configuration parameters
+            action_when_away = data.get("action_when_away", "reduce_temperature")
+            action_when_home = data.get("action_when_home", "increase_temperature")
+            temp_drop_when_away = data.get("temp_drop_when_away")
+            temp_boost_when_home = data.get("temp_boost_when_home")
+            
+            area.add_presence_sensor(
+                entity_id, 
+                action_when_away, 
+                action_when_home,
+                temp_drop_when_away,
+                temp_boost_when_home
+            )
             await self.area_manager.async_save()
             
             # Refresh coordinator

@@ -59,13 +59,6 @@ smart_heating/
    - **Use only when sync.sh isn't enough**
    - Usage: `./setup.sh`
 
-3. **`deploy.sh`** - Production deployment (to actual HA via Samba)
-   - Deploys to physical Home Assistant OS
-   - Requires Samba share mounted at `/Volumes/config`
-   - Copies `smart_heating/` to `/Volumes/config/custom_components/smart_heating/`
-   - Not used during development
-   - Usage: `./deploy.sh`
-
 ### Development Cycle
 ```bash
 # Normal development workflow:

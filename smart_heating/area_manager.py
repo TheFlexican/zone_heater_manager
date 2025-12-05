@@ -224,15 +224,12 @@ class Area:
         # HVAC mode (heat/cool/auto)
         self.hvac_mode: str = HVAC_MODE_HEAT
         
-        # Window sensor settings
-        self.window_sensors: list[str] = []  # List of window/door sensor entity IDs
-        self.window_open_action_enabled: bool = True
-        self.window_open_temp_drop: float = DEFAULT_WINDOW_OPEN_TEMP_DROP
+        # Window sensor settings (new config structure)
+        self.window_sensors: list[dict[str, Any]] = []  # List of window sensor configs
         self.window_is_open: bool = False  # Cached state
         
-        # Presence sensor settings
-        self.presence_sensors: list[str] = []  # List of presence/motion sensor entity IDs
-        self.presence_temp_boost: float = DEFAULT_PRESENCE_TEMP_BOOST
+        # Presence sensor settings (new config structure)
+        self.presence_sensors: list[dict[str, Any]] = []  # List of presence sensor configs
         self.presence_detected: bool = False  # Cached state
 
     def add_device(self, device_id: str, device_type: str, mqtt_topic: str | None = None) -> None:
@@ -320,15 +317,34 @@ class Area:
             if device["type"] == DEVICE_TYPE_VALVE
         ]
 
-    def add_window_sensor(self, entity_id: str) -> None:
+    def add_window_sensor(
+        self, 
+        entity_id: str, 
+        action_when_open: str = "reduce_temperature",
+        temp_drop: float | None = None
+    ) -> None:
         """Add a window/door sensor to the area.
         
         Args:
             entity_id: Entity ID of the window/door sensor
+            action_when_open: Action to take when window opens (turn_off, reduce_temperature, none)
+            temp_drop: Temperature drop when open (only for reduce_temperature action)
         """
-        if entity_id not in self.window_sensors:
-            self.window_sensors.append(entity_id)
-            _LOGGER.debug("Added window sensor %s to area %s", entity_id, self.area_id)
+        # Check if sensor already exists
+        existing = [s for s in self.window_sensors if s.get("entity_id") == entity_id]
+        if existing:
+            _LOGGER.warning("Window sensor %s already exists in area %s", entity_id, self.area_id)
+            return
+            
+        sensor_config = {
+            "entity_id": entity_id,
+            "action_when_open": action_when_open,
+        }
+        if action_when_open == "reduce_temperature":
+            sensor_config["temp_drop"] = temp_drop if temp_drop is not None else DEFAULT_WINDOW_OPEN_TEMP_DROP
+            
+        self.window_sensors.append(sensor_config)
+        _LOGGER.debug("Added window sensor %s to area %s with action %s", entity_id, self.area_id, action_when_open)
 
     def remove_window_sensor(self, entity_id: str) -> None:
         """Remove a window/door sensor from the area.
@@ -336,19 +352,44 @@ class Area:
         Args:
             entity_id: Entity ID of the window/door sensor
         """
-        if entity_id in self.window_sensors:
-            self.window_sensors.remove(entity_id)
-            _LOGGER.debug("Removed window sensor %s from area %s", entity_id, self.area_id)
+        self.window_sensors = [s for s in self.window_sensors if s.get("entity_id") != entity_id]
+        _LOGGER.debug("Removed window sensor %s from area %s", entity_id, self.area_id)
 
-    def add_presence_sensor(self, entity_id: str) -> None:
+    def add_presence_sensor(
+        self,
+        entity_id: str,
+        action_when_away: str = "reduce_temperature",
+        action_when_home: str = "increase_temperature",
+        temp_drop_when_away: float | None = None,
+        temp_boost_when_home: float | None = None
+    ) -> None:
         """Add a presence/motion sensor to the area.
         
         Args:
             entity_id: Entity ID of the presence sensor
+            action_when_away: Action when no presence detected
+            action_when_home: Action when presence detected
+            temp_drop_when_away: Temperature drop when away
+            temp_boost_when_home: Temperature boost when home
         """
-        if entity_id not in self.presence_sensors:
-            self.presence_sensors.append(entity_id)
-            _LOGGER.debug("Added presence sensor %s to area %s", entity_id, self.area_id)
+        # Check if sensor already exists
+        existing = [s for s in self.presence_sensors if s.get("entity_id") == entity_id]
+        if existing:
+            _LOGGER.warning("Presence sensor %s already exists in area %s", entity_id, self.area_id)
+            return
+            
+        sensor_config = {
+            "entity_id": entity_id,
+            "action_when_away": action_when_away,
+            "action_when_home": action_when_home,
+        }
+        if action_when_away == "reduce_temperature":
+            sensor_config["temp_drop_when_away"] = temp_drop_when_away if temp_drop_when_away is not None else 3.0
+        if action_when_home == "increase_temperature":
+            sensor_config["temp_boost_when_home"] = temp_boost_when_home if temp_boost_when_home is not None else DEFAULT_PRESENCE_TEMP_BOOST
+            
+        self.presence_sensors.append(sensor_config)
+        _LOGGER.debug("Added presence sensor %s to area %s", entity_id, self.area_id)
 
     def remove_presence_sensor(self, entity_id: str) -> None:
         """Remove a presence/motion sensor from the area.
@@ -356,9 +397,8 @@ class Area:
         Args:
             entity_id: Entity ID of the presence sensor
         """
-        if entity_id in self.presence_sensors:
-            self.presence_sensors.remove(entity_id)
-            _LOGGER.debug("Removed presence sensor %s from area %s", entity_id, self.area_id)
+        self.presence_sensors = [s for s in self.presence_sensors if s.get("entity_id") != entity_id]
+        _LOGGER.debug("Removed presence sensor %s from area %s", entity_id, self.area_id)
 
     def get_preset_temperature(self) -> float:
         """Get the target temperature for the current preset mode.
@@ -495,9 +535,17 @@ class Area:
         if self.boost_mode_active:
             return self.boost_temp
         
-        # Priority 2: Window open action - reduce temperature significantly
-        if self.window_is_open and self.window_open_action_enabled:
-            return max(5.0, self.target_temperature - self.window_open_temp_drop)
+        # Priority 2: Window open actions
+        if self.window_is_open and len(self.window_sensors) > 0:
+            # Find sensors with action_when_open configured
+            for sensor in self.window_sensors:
+                action = sensor.get("action_when_open", "reduce_temperature")
+                if action == "turn_off":
+                    return 5.0  # Turn off heating (frost protection)
+                elif action == "reduce_temperature":
+                    temp_drop = sensor.get("temp_drop", DEFAULT_WINDOW_OPEN_TEMP_DROP)
+                    return max(5.0, self.target_temperature - temp_drop)
+                # "none" action means no temperature change
         
         # Priority 3: Preset mode temperature
         if self.preset_mode != PRESET_NONE and self.preset_mode != PRESET_BOOST:
@@ -539,13 +587,35 @@ class Area:
                     target - self.night_boost_offset, self.night_boost_offset, target
                 )
         
-        # Priority 7: Presence boost (additive)
-        if self.presence_detected and len(self.presence_sensors) > 0:
-            target += self.presence_temp_boost
-            _LOGGER.debug(
-                "Presence detected in area %s: adding %.1f°C boost (final: %.1f°C)",
-                self.area_id, self.presence_temp_boost, target
-            )
+        # Priority 7: Presence sensor actions
+        if len(self.presence_sensors) > 0:
+            for sensor in self.presence_sensors:
+                # Check if presence is detected (this will be updated by climate_controller)
+                if self.presence_detected:
+                    action = sensor.get("action_when_home", "increase_temperature")
+                    if action == "set_comfort":
+                        target = self.comfort_temp
+                    elif action == "increase_temperature":
+                        temp_boost = sensor.get("temp_boost_when_home", DEFAULT_PRESENCE_TEMP_BOOST)
+                        target += temp_boost
+                        _LOGGER.debug(
+                            "Presence detected in area %s: adding %.1f°C boost (final: %.1f°C)",
+                            self.area_id, temp_boost, target
+                        )
+                else:
+                    # No presence detected (away)
+                    action = sensor.get("action_when_away", "reduce_temperature")
+                    if action == "turn_off":
+                        return 5.0  # Turn off heating (frost protection)
+                    elif action == "set_eco":
+                        target = self.eco_temp
+                    elif action == "reduce_temperature":
+                        temp_drop = sensor.get("temp_drop_when_away", 3.0)
+                        target -= temp_drop
+                        _LOGGER.debug(
+                            "No presence in area %s: reducing %.1f°C (final: %.1f°C)",
+                            self.area_id, temp_drop, target
+                        )
         
         return target
 
@@ -631,13 +701,10 @@ class Area:
             "boost_temp": self.boost_temp,
             # HVAC mode
             "hvac_mode": self.hvac_mode,
-            # Window sensors
+            # Window sensors (new structure)
             "window_sensors": self.window_sensors,
-            "window_open_action_enabled": self.window_open_action_enabled,
-            "window_open_temp_drop": self.window_open_temp_drop,
-            # Presence sensors
+            # Presence sensors (new structure)
             "presence_sensors": self.presence_sensors,
-            "presence_temp_boost": self.presence_temp_boost,
         }
 
     @classmethod
@@ -683,14 +750,37 @@ class Area:
         # HVAC mode
         area.hvac_mode = data.get("hvac_mode", HVAC_MODE_HEAT)
         
-        # Window sensors
-        area.window_sensors = data.get("window_sensors", [])
-        area.window_open_action_enabled = data.get("window_open_action_enabled", True)
-        area.window_open_temp_drop = data.get("window_open_temp_drop", DEFAULT_WINDOW_OPEN_TEMP_DROP)
+        # Window sensors - support both old string format and new dict format
+        window_sensors_data = data.get("window_sensors", [])
+        if window_sensors_data and isinstance(window_sensors_data[0], str):
+            # Legacy format: convert to new format
+            area.window_sensors = [
+                {
+                    "entity_id": entity_id,
+                    "action_when_open": "reduce_temperature",
+                    "temp_drop": data.get("window_open_temp_drop", DEFAULT_WINDOW_OPEN_TEMP_DROP)
+                }
+                for entity_id in window_sensors_data
+            ]
+        else:
+            area.window_sensors = window_sensors_data
         
-        # Presence sensors
-        area.presence_sensors = data.get("presence_sensors", [])
-        area.presence_temp_boost = data.get("presence_temp_boost", DEFAULT_PRESENCE_TEMP_BOOST)
+        # Presence sensors - support both old string format and new dict format
+        presence_sensors_data = data.get("presence_sensors", [])
+        if presence_sensors_data and isinstance(presence_sensors_data[0], str):
+            # Legacy format: convert to new format
+            area.presence_sensors = [
+                {
+                    "entity_id": entity_id,
+                    "action_when_away": "reduce_temperature",
+                    "action_when_home": "increase_temperature",
+                    "temp_drop_when_away": 3.0,
+                    "temp_boost_when_home": data.get("presence_temp_boost", DEFAULT_PRESENCE_TEMP_BOOST)
+                }
+                for entity_id in presence_sensors_data
+            ]
+        else:
+            area.presence_sensors = presence_sensors_data
         
         # Load schedules
         for schedule_data in data.get("schedules", []):

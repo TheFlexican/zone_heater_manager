@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { Area, Device, DeviceAdd, ScheduleEntry, LearningStats } from './types'
+import { Area, Device, DeviceAdd, ScheduleEntry, LearningStats, HassEntity, WindowSensorConfig, PresenceSensorConfig } from './types'
 
 const API_BASE = '/api/smart_heating'
 
@@ -120,13 +120,16 @@ export const setFrostProtection = async (
 }
 
 // Window Sensors
+export const getBinarySensorEntities = async (): Promise<HassEntity[]> => {
+  const response = await axios.get(`${API_BASE}/entities/binary_sensor`)
+  return response.data.entities
+}
+
 export const addWindowSensor = async (
   areaId: string,
-  sensorEntityId: string
+  config: WindowSensorConfig
 ): Promise<void> => {
-  await axios.post(`${API_BASE}/areas/${areaId}/window_sensors`, {
-    sensor_entity_id: sensorEntityId
-  })
+  await axios.post(`${API_BASE}/areas/${areaId}/window_sensors`, config)
 }
 
 export const removeWindowSensor = async (
@@ -139,11 +142,9 @@ export const removeWindowSensor = async (
 // Presence Sensors
 export const addPresenceSensor = async (
   areaId: string,
-  sensorEntityId: string
+  config: PresenceSensorConfig
 ): Promise<void> => {
-  await axios.post(`${API_BASE}/areas/${areaId}/presence_sensors`, {
-    sensor_entity_id: sensorEntityId
-  })
+  await axios.post(`${API_BASE}/areas/${areaId}/presence_sensors`, config)
 }
 
 export const removePresenceSensor = async (

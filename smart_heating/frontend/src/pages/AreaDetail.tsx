@@ -34,7 +34,7 @@ import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment'
 import AcUnitIcon from '@mui/icons-material/AcUnit'
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew'
 import TuneIcon from '@mui/icons-material/Tune'
-import { Zone, Device } from '../types'
+import { Zone, Device, WindowSensorConfig, PresenceSensorConfig } from '../types'
 import { 
   getZones, 
   getDevices, 
@@ -55,6 +55,7 @@ import {
 } from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
 import HistoryChart from '../components/HistoryChart'
+import SensorConfigDialog from '../components/SensorConfigDialog'
 import { useWebSocket } from '../hooks/useWebSocket'
 
 interface TabPanelProps {
@@ -89,6 +90,8 @@ const ZoneDetail = () => {
   const [temperature, setTemperature] = useState(21)
   const [historyRetention, setHistoryRetentionState] = useState(30)
   const [recordInterval, setRecordInterval] = useState(5)
+  const [sensorDialogOpen, setSensorDialogOpen] = useState(false)
+  const [sensorDialogType, setSensorDialogType] = useState<'window' | 'presence'>('window')
 
   // WebSocket for real-time updates
   useWebSocket({
@@ -1166,36 +1169,51 @@ const ZoneDetail = () => {
                 Window Sensors
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                Automatically reduce heating when windows are open. Configure binary sensors (window/door sensors).
+                Automatically adjust heating when windows are open. Configure binary sensors (window/door sensors) with custom actions.
               </Typography>
               
               {area.window_sensors && area.window_sensors.length > 0 ? (
                 <List dense>
-                  {area.window_sensors.map((sensor) => (
-                    <ListItem
-                      key={sensor}
-                      secondaryAction={
-                        <IconButton
-                          edge="end"
-                          onClick={async () => {
-                            try {
-                              await removeWindowSensor(area.id, sensor)
-                              loadData()
-                            } catch (error) {
-                              console.error('Failed to remove window sensor:', error)
-                            }
-                          }}
-                        >
-                          <RemoveCircleOutlineIcon />
-                        </IconButton>
-                      }
-                    >
-                      <ListItemText 
-                        primary={sensor}
-                        secondary={`Temp drop: ${area.window_open_temp_drop ?? -5}°C when open`}
-                      />
-                    </ListItem>
-                  ))}
+                  {area.window_sensors.map((sensor) => {
+                    const sensorConfig = typeof sensor === 'string' 
+                      ? { entity_id: sensor, action_when_open: 'reduce_temperature', temp_drop: 5 }
+                      : sensor
+                    
+                    let secondaryText = ''
+                    if (sensorConfig.action_when_open === 'turn_off') {
+                      secondaryText = 'Action: Turn off heating when open'
+                    } else if (sensorConfig.action_when_open === 'reduce_temperature') {
+                      secondaryText = `Action: Reduce temperature by ${sensorConfig.temp_drop}°C when open`
+                    } else {
+                      secondaryText = 'Action: No action when open'
+                    }
+                    
+                    return (
+                      <ListItem
+                        key={sensorConfig.entity_id}
+                        secondaryAction={
+                          <IconButton
+                            edge="end"
+                            onClick={async () => {
+                              try {
+                                await removeWindowSensor(area.id, sensorConfig.entity_id)
+                                loadData()
+                              } catch (error) {
+                                console.error('Failed to remove window sensor:', error)
+                              }
+                            }}
+                          >
+                            <RemoveCircleOutlineIcon />
+                          </IconButton>
+                        }
+                      >
+                        <ListItemText 
+                          primary={sensorConfig.entity_id}
+                          secondary={secondaryText}
+                        />
+                      </ListItem>
+                    )
+                  })}
                 </List>
               ) : (
                 <Alert severity="info">
@@ -1203,29 +1221,16 @@ const ZoneDetail = () => {
                 </Alert>
               )}
               
-              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                <TextField
-                  label="Sensor Entity ID"
-                  placeholder="binary_sensor.window_living_room"
-                  fullWidth
-                  id="window-sensor-input"
-                />
+              <Box sx={{ mt: 2 }}>
                 <Button
                   variant="outlined"
-                  onClick={async () => {
-                    try {
-                      const input = document.getElementById('window-sensor-input') as HTMLInputElement
-                      if (input.value) {
-                        await addWindowSensor(area.id, input.value)
-                        input.value = ''
-                        loadData()
-                      }
-                    } catch (error) {
-                      console.error('Failed to add window sensor:', error)
-                    }
+                  fullWidth
+                  onClick={() => {
+                    setSensorDialogType('window')
+                    setSensorDialogOpen(true)
                   }}
                 >
-                  Add Sensor
+                  Add Window Sensor
                 </Button>
               </Box>
             </Paper>
@@ -1236,36 +1241,71 @@ const ZoneDetail = () => {
                 Presence Sensors
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                Increase heating when presence/motion is detected. Configure binary sensors (motion/occupancy/presence sensors).
+                Adjust heating based on presence/motion detection. Configure binary sensors (motion/occupancy/presence sensors) with custom actions.
               </Typography>
               
               {area.presence_sensors && area.presence_sensors.length > 0 ? (
                 <List dense>
-                  {area.presence_sensors.map((sensor) => (
-                    <ListItem
-                      key={sensor}
-                      secondaryAction={
-                        <IconButton
-                          edge="end"
-                          onClick={async () => {
-                            try {
-                              await removePresenceSensor(area.id, sensor)
-                              loadData()
-                            } catch (error) {
-                              console.error('Failed to remove presence sensor:', error)
-                            }
-                          }}
-                        >
-                          <RemoveCircleOutlineIcon />
-                        </IconButton>
-                      }
-                    >
-                      <ListItemText 
-                        primary={sensor}
-                        secondary={`Temp boost: +${area.presence_temp_boost ?? 2}°C when detected`}
-                      />
-                    </ListItem>
-                  ))}
+                  {area.presence_sensors.map((sensor) => {
+                    const sensorConfig = typeof sensor === 'string'
+                      ? { entity_id: sensor, action_when_away: 'reduce_temperature', action_when_home: 'increase_temperature', temp_drop_when_away: 3, temp_boost_when_home: 2 }
+                      : sensor
+                    
+                    let awayText = ''
+                    if (sensorConfig.action_when_away === 'turn_off') {
+                      awayText = 'Turn off heating'
+                    } else if (sensorConfig.action_when_away === 'reduce_temperature') {
+                      awayText = `Reduce by ${sensorConfig.temp_drop_when_away}°C`
+                    } else if (sensorConfig.action_when_away === 'set_eco') {
+                      awayText = 'Set to Eco mode'
+                    } else {
+                      awayText = 'No action'
+                    }
+                    
+                    let homeText = ''
+                    if (sensorConfig.action_when_home === 'set_comfort') {
+                      homeText = 'Set to Comfort mode'
+                    } else if (sensorConfig.action_when_home === 'increase_temperature') {
+                      homeText = `Increase by +${sensorConfig.temp_boost_when_home}°C`
+                    } else {
+                      homeText = 'No action'
+                    }
+                    
+                    return (
+                      <ListItem
+                        key={sensorConfig.entity_id}
+                        secondaryAction={
+                          <IconButton
+                            edge="end"
+                            onClick={async () => {
+                              try {
+                                await removePresenceSensor(area.id, sensorConfig.entity_id)
+                                loadData()
+                              } catch (error) {
+                                console.error('Failed to remove presence sensor:', error)
+                              }
+                            }}
+                          >
+                            <RemoveCircleOutlineIcon />
+                          </IconButton>
+                        }
+                      >
+                        <ListItemText 
+                          primary={sensorConfig.entity_id}
+                          secondary={
+                            <>
+                              <Typography component="span" variant="body2" color="text.secondary" display="block">
+                                When away: {awayText}
+                              </Typography>
+                              <Typography component="span" variant="body2" color="text.secondary" display="block">
+                                When home: {homeText}
+                              </Typography>
+                            </>
+                          }
+                        />
+                      </ListItem>
+                    )
+                  })}
                 </List>
               ) : (
                 <Alert severity="info">
@@ -1273,34 +1313,41 @@ const ZoneDetail = () => {
                 </Alert>
               )}
               
-              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                <TextField
-                  label="Sensor Entity ID"
-                  placeholder="binary_sensor.motion_living_room"
-                  fullWidth
-                  id="presence-sensor-input"
-                />
+              <Box sx={{ mt: 2 }}>
                 <Button
                   variant="outlined"
-                  onClick={async () => {
-                    try {
-                      const input = document.getElementById('presence-sensor-input') as HTMLInputElement
-                      if (input.value) {
-                        await addPresenceSensor(area.id, input.value)
-                        input.value = ''
-                        loadData()
-                      }
-                    } catch (error) {
-                      console.error('Failed to add presence sensor:', error)
-                    }
+                  fullWidth
+                  onClick={() => {
+                    setSensorDialogType('presence')
+                    setSensorDialogOpen(true)
                   }}
                 >
-                  Add Sensor
+                  Add Presence Sensor
                 </Button>
               </Box>
             </Paper>
           </Box>
         </TabPanel>
+
+        {/* Sensor Configuration Dialog */}
+        <SensorConfigDialog
+          open={sensorDialogOpen}
+          onClose={() => setSensorDialogOpen(false)}
+          onAdd={async (config) => {
+            if (!area) return
+            try {
+              if (sensorDialogType === 'window') {
+                await addWindowSensor(area.id, config as WindowSensorConfig)
+              } else {
+                await addPresenceSensor(area.id, config as PresenceSensorConfig)
+              }
+              loadData()
+            } catch (error) {
+              console.error('Failed to add sensor:', error)
+            }
+          }}
+          sensorType={sensorDialogType}
+        />
 
         {/* Learning Tab */}
         <TabPanel value={tabValue} index={5}>

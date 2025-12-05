@@ -163,11 +163,29 @@ DEFAULT_FROST_PROTECTION_TEMP: Final = 7.0
 # Window sensor attributes
 ATTR_WINDOW_OPEN_ACTION: Final = "window_open_action"
 ATTR_WINDOW_OPEN_TEMP_DROP: Final = "window_open_temp_drop"
+ATTR_ACTION_WHEN_OPEN: Final = "action_when_open"
 DEFAULT_WINDOW_OPEN_TEMP_DROP: Final = 5.0
+
+# Window sensor actions
+WINDOW_ACTION_TURN_OFF: Final = "turn_off"
+WINDOW_ACTION_REDUCE_TEMP: Final = "reduce_temperature"
+WINDOW_ACTION_NONE: Final = "none"
 
 # Presence sensor attributes
 ATTR_PRESENCE_TEMP_BOOST: Final = "presence_temp_boost"
+ATTR_ACTION_WHEN_AWAY: Final = "action_when_away"
+ATTR_ACTION_WHEN_HOME: Final = "action_when_home"
+ATTR_TEMP_DROP_WHEN_AWAY: Final = "temp_drop_when_away"
+ATTR_TEMP_BOOST_WHEN_HOME: Final = "temp_boost_when_home"
 DEFAULT_PRESENCE_TEMP_BOOST: Final = 2.0
+
+# Presence sensor actions
+PRESENCE_ACTION_TURN_OFF: Final = "turn_off"
+PRESENCE_ACTION_REDUCE_TEMP: Final = "reduce_temperature"
+PRESENCE_ACTION_SET_ECO: Final = "set_eco"
+PRESENCE_ACTION_INCREASE_TEMP: Final = "increase_temperature"
+PRESENCE_ACTION_SET_COMFORT: Final = "set_comfort"
+PRESENCE_ACTION_NONE: Final = "none"
 
 # HVAC mode
 ATTR_HVAC_MODE: Final = "hvac_mode"

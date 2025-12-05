@@ -62,15 +62,39 @@ export interface Zone {
   hvac_mode?: string
   
   // Window sensor settings
-  window_sensors?: string[]
-  window_open_action_enabled?: boolean
-  window_open_temp_drop?: number
+  window_sensors?: WindowSensorConfig[]
   window_is_open?: boolean
   
   // Presence sensor settings
-  presence_sensors?: string[]
-  presence_temp_boost?: number
+  presence_sensors?: PresenceSensorConfig[]
   presence_detected?: boolean
+}
+
+// Window sensor configuration
+export interface WindowSensorConfig {
+  entity_id: string
+  action_when_open: 'turn_off' | 'reduce_temperature' | 'none'
+  temp_drop?: number  // Only used when action_when_open is 'reduce_temperature'
+}
+
+// Presence sensor configuration
+export interface PresenceSensorConfig {
+  entity_id: string
+  action_when_away: 'turn_off' | 'reduce_temperature' | 'set_eco' | 'none'
+  action_when_home: 'increase_temperature' | 'set_comfort' | 'none'
+  temp_drop_when_away?: number  // Only used when action_when_away is 'reduce_temperature'
+  temp_boost_when_home?: number  // Only used when action_when_home is 'increase_temperature'
+}
+
+// Home Assistant entity for selector
+export interface HassEntity {
+  entity_id: string
+  state: string
+  attributes: {
+    friendly_name?: string
+    device_class?: string
+    [key: string]: any
+  }
 }
 
 // Alias Area to Zone for compatibility
