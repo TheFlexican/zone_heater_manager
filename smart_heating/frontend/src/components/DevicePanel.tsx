@@ -107,16 +107,23 @@ const DevicePanel = ({ devices }: DevicePanelProps) => {
                           primary={device.name || device.id}
                           primaryTypographyProps={{ color: 'text.primary' }}
                           secondary={
-                            <Chip
-                              label={getDeviceTypeLabel(device.type)}
-                              size="small"
-                              variant="outlined"
-                              sx={{ 
-                                mt: 0.5,
-                                borderColor: 'divider',
-                                color: 'text.secondary'
-                              }}
-                            />
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
+                              <Chip
+                                label={getDeviceTypeLabel(device.type)}
+                                size="small"
+                                variant="outlined"
+                                sx={{ 
+                                  borderColor: 'divider',
+                                  color: 'text.secondary',
+                                  width: 'fit-content'
+                                }}
+                              />
+                              {device.ha_area_name && (
+                                <Typography variant="caption" color="text.secondary">
+                                  📍 {device.ha_area_name}
+                                </Typography>
+                              )}
+                            </Box>
                           }
                         />
                       </ListItem>

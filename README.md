@@ -1165,6 +1165,16 @@ Current version: **0.3.3**
 
 ### Changelog
 
+#### v0.3.10 (2025-12-05)
+**Show Device Home Assistant Area Locations**
+
+- 📍 **Device Area Location Display**
+  - Available devices now show their Home Assistant area assignment
+  - Location displayed below device type chip with 📍 icon
+  - Helps users quickly identify where devices are physically located
+  - Makes it easier to drag devices to the correct Smart Heating areas
+  - Uses existing `ha_area_name` data from backend device discovery
+
 #### v0.3.9 (2025-12-05)
 **Hide/Show Areas, Thermostat History, Switch Support**
 
