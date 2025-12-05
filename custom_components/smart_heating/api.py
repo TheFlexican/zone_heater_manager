@@ -1140,7 +1140,7 @@ class SmartHeatingAPIView(HomeAssistantView):
         try:
             area = self.area_manager.get_area(area_id)
             if not area:
-                raise ValueError(f("Area {area_id} not found")
+                raise ValueError(f"Area {area_id} not found")
             
             area.hvac_mode = hvac_mode
             await self.area_manager.async_save()
