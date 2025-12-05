@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 HA_CONTAINER="homeassistant-test"
-INTEGRATION_DIR="custom_components/smart_heating"
+INTEGRATION_DIR="smart_heating"
 FRONTEND_DIR="$INTEGRATION_DIR/frontend"
 
 echo -e "${BLUE}════════════════════════════════════════════════════════${NC}"
@@ -25,7 +25,7 @@ if ! docker ps | grep -q "$HA_CONTAINER"; then
     exit 1
 fi
 
-echo -e "${YELLOW}[1/4]${NC} Building frontend..."
+echo -e "${YELLOW}[1/3]${NC} Building frontend..."
 if [ -d "$FRONTEND_DIR" ]; then
     cd "$FRONTEND_DIR"
     
@@ -52,46 +52,42 @@ else
 fi
 echo ""
 
-echo -e "${YELLOW}[2/4]${NC} Syncing backend Python files..."
-# Sync all Python files and YAML files
-docker exec "$HA_CONTAINER" mkdir -p /config/custom_components/smart_heating
+echo -e "${YELLOW}[2/3]${NC} Syncing integration files..."
 
-# Copy Python files
-for file in "$INTEGRATION_DIR"/*.py; do
-    if [ -f "$file" ]; then
-        filename=$(basename "$file")
-        docker cp "$file" "$HA_CONTAINER:/config/custom_components/smart_heating/$filename"
-        echo "  → $filename"
-    fi
-done
+# Create tarball excluding unnecessary files
+cd "$INTEGRATION_DIR"
+tar czf /tmp/smart_heating_sync.tar.gz \
+    --exclude='frontend/node_modules' \
+    --exclude='frontend/src' \
+    --exclude='__pycache__' \
+    --exclude='.pytest_cache' \
+    --exclude='*.pyc' \
+    --exclude='.DS_Store' \
+    --exclude='._*' \
+    .
 
-# Copy YAML and JSON files
-for ext in yaml json; do
-    for file in "$INTEGRATION_DIR"/*.$ext; do
-        if [ -f "$file" ]; then
-            filename=$(basename "$file")
-            docker cp "$file" "$HA_CONTAINER:/config/custom_components/smart_heating/$filename"
-            echo "  → $filename"
-        fi
-    done
-done
+cd - > /dev/null
 
-echo -e "${GREEN}✓${NC} Backend files synced"
+# Ensure directory exists in container
+docker exec "$HA_CONTAINER" mkdir -p /config/custom_components/smart_heating > /dev/null 2>&1 || true
+
+# Copy tarball to container
+docker cp /tmp/smart_heating_sync.tar.gz "$HA_CONTAINER:/tmp/" > /dev/null
+
+# Extract in container
+docker exec "$HA_CONTAINER" tar xzf /tmp/smart_heating_sync.tar.gz -C /config/custom_components/smart_heating/
+
+# Clean up
+docker exec "$HA_CONTAINER" rm /tmp/smart_heating_sync.tar.gz
+rm /tmp/smart_heating_sync.tar.gz
+
+# Count files synced
+file_count=$(docker exec "$HA_CONTAINER" find /config/custom_components/smart_heating -type f | wc -l | tr -d ' ')
+echo -e "  → Synced $file_count files"
+echo -e "${GREEN}✓${NC} Integration synced"
 echo ""
 
-echo -e "${YELLOW}[3/4]${NC} Syncing frontend dist..."
-# Remove old dist and copy new one
-docker exec "$HA_CONTAINER" rm -rf /config/custom_components/smart_heating/frontend/dist
-docker exec "$HA_CONTAINER" mkdir -p /config/custom_components/smart_heating/frontend
-docker cp "$FRONTEND_DIR/dist" "$HA_CONTAINER:/config/custom_components/smart_heating/frontend/dist"
-
-# Count files in dist
-file_count=$(find "$FRONTEND_DIR/dist" -type f | wc -l | tr -d ' ')
-echo "  → Synced $file_count frontend files"
-echo -e "${GREEN}✓${NC} Frontend synced"
-echo ""
-
-echo -e "${YELLOW}[4/4]${NC} Restarting Home Assistant..."
+echo -e "${YELLOW}[3/3]${NC} Restarting Home Assistant..."
 docker restart "$HA_CONTAINER" > /dev/null
 
 echo "  Waiting for restart (20 seconds)..."

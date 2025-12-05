@@ -1084,6 +1084,29 @@ Current version: **0.3.1**
 
 ### Changelog
 
+#### v0.3.2 (2025-12-05)
+**Frontend UI for v0.3.0 Features**
+
+- 🎨 **Complete v0.3.0 Feature UI Implementation**
+  - Added Preset Modes dropdown in Settings tab (away, eco, comfort, home, sleep, activity, boost, none)
+  - Added Boost Mode controls with temperature and duration inputs
+  - Added HVAC Mode selector (heat, cool, auto, off)
+  - Added Window Sensors management with add/remove functionality
+  - Added Presence Sensors management with add/remove functionality
+  - All features now accessible via Settings tab in area detail page
+
+- 🏗️ **Project Restructure**
+  - Moved integration folder to root following Home Assistant standard structure
+  - Renamed project from `zone_heater_manager` to `smart_heating`
+  - Updated all deployment scripts and documentation
+  - Updated GitHub repository URL
+
+- 📝 **Documentation**
+  - Added comprehensive `.copilot-instructions.md` for development guidance
+  - Updated all references to match new project name
+
+
+
 #### v0.3.1 (2025-12-05)
 **UI/UX Improvements and Real-time Updates**
 

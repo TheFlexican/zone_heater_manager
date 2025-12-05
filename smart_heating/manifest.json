@@ -4,9 +4,9 @@
   "codeowners": ["@TheFlexican"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/TheFlexican/zone_heater_manager",
+  "documentation": "https://github.com/TheFlexican/smart_heating",
   "integration_type": "hub",
   "iot_class": "local_push",
   "requirements": [],
-  "version": "0.3.1"
+  "version": "0.3.2"
 }
