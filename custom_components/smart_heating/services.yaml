@@ -366,3 +366,292 @@ set_trv_temperatures:
           max: 20
           step: 0.5
           unit_of_measurement: "°C"
+
+# Advanced Heating Features
+
+set_preset_mode:
+  name: Set Preset Mode
+  description: Set the preset mode for an area (AWAY, ECO, COMFORT, HOME, SLEEP, ACTIVITY, BOOST, or NONE)
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    preset_mode:
+      name: Preset Mode
+      description: Preset mode to activate
+      required: true
+      example: "comfort"
+      selector:
+        select:
+          options:
+            - label: "None (Use schedule/manual)"
+              value: "none"
+            - label: "Away (16°C)"
+              value: "away"
+            - label: "Eco (18°C)"
+              value: "eco"
+            - label: "Comfort (22°C)"
+              value: "comfort"
+            - label: "Home (20°C)"
+              value: "home"
+            - label: "Sleep (19°C)"
+              value: "sleep"
+            - label: "Activity (21°C)"
+              value: "activity"
+            - label: "Boost (24°C)"
+              value: "boost"
+
+set_boost_mode:
+  name: Set Boost Mode
+  description: Activate temporary boost mode to quickly heat an area
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    duration:
+      name: Duration
+      description: Boost duration in minutes
+      required: true
+      example: 30
+      selector:
+        number:
+          min: 5
+          max: 180
+          step: 5
+          unit_of_measurement: "min"
+    temperature:
+      name: Boost Temperature
+      description: Target temperature during boost (optional, defaults to 24°C)
+      required: false
+      example: 24.0
+      selector:
+        number:
+          min: 18
+          max: 30
+          step: 0.5
+          unit_of_measurement: "°C"
+
+cancel_boost:
+  name: Cancel Boost Mode
+  description: Cancel active boost mode for an area
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+
+set_frost_protection:
+  name: Set Frost Protection
+  description: Configure global frost protection to prevent freezing (applies to all areas)
+  fields:
+    enabled:
+      name: Enabled
+      description: Enable or disable frost protection
+      required: true
+      example: true
+      selector:
+        boolean:
+    temperature:
+      name: Minimum Temperature
+      description: Minimum temperature to maintain (°C)
+      required: false
+      default: 7.0
+      example: 7.0
+      selector:
+        number:
+          min: 3
+          max: 15
+          step: 0.5
+          unit_of_measurement: "°C"
+
+add_window_sensor:
+  name: Add Window Sensor
+  description: Add a window/door sensor to an area for automatic heating adjustment
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    entity_id:
+      name: Window Sensor Entity
+      description: Entity ID of the window/door sensor (binary_sensor)
+      required: true
+      example: "binary_sensor.living_room_window"
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: 
+            - window
+            - door
+            - opening
+
+remove_window_sensor:
+  name: Remove Window Sensor
+  description: Remove a window/door sensor from an area
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    entity_id:
+      name: Window Sensor Entity
+      description: Entity ID of the window/door sensor to remove
+      required: true
+      example: "binary_sensor.living_room_window"
+      selector:
+        entity:
+          domain: binary_sensor
+
+add_presence_sensor:
+  name: Add Presence Sensor
+  description: Add a presence/motion sensor to an area for automatic temperature boost
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    entity_id:
+      name: Presence Sensor Entity
+      description: Entity ID of the presence/motion sensor (binary_sensor)
+      required: true
+      example: "binary_sensor.living_room_motion"
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: 
+            - motion
+            - occupancy
+            - presence
+
+remove_presence_sensor:
+  name: Remove Presence Sensor
+  description: Remove a presence/motion sensor from an area
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    entity_id:
+      name: Presence Sensor Entity
+      description: Entity ID of the presence/motion sensor to remove
+      required: true
+      example: "binary_sensor.living_room_motion"
+      selector:
+        entity:
+          domain: binary_sensor
+
+set_hvac_mode:
+  name: Set HVAC Mode
+  description: Set the HVAC mode for an area (OFF, HEAT, COOL, AUTO)
+  fields:
+    area_id:
+      name: Zone ID
+      description: Identifier of the area
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    hvac_mode:
+      name: HVAC Mode
+      description: HVAC operation mode
+      required: true
+      example: "heat"
+      selector:
+        select:
+          options:
+            - label: "Off"
+              value: "off"
+            - label: "Heat"
+              value: "heat"
+            - label: "Cool"
+              value: "cool"
+            - label: "Auto"
+              value: "auto"
+
+copy_schedule:
+  name: Copy Schedule
+  description: Copy all schedules from one area/day to another area/day
+  fields:
+    source_area_id:
+      name: Source Zone ID
+      description: Area to copy schedules from
+      required: true
+      example: "living_room"
+      selector:
+        text:
+    target_area_id:
+      name: Target Zone ID
+      description: Area to copy schedules to (can be same as source)
+      required: true
+      example: "bedroom"
+      selector:
+        text:
+    source_days:
+      name: Source Days
+      description: Days to copy from (optional, defaults to all days)
+      required: false
+      example: ["mon"]
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: "Monday"
+              value: "mon"
+            - label: "Tuesday"
+              value: "tue"
+            - label: "Wednesday"
+              value: "wed"
+            - label: "Thursday"
+              value: "thu"
+            - label: "Friday"
+              value: "fri"
+            - label: "Saturday"
+              value: "sat"
+            - label: "Sunday"
+              value: "sun"
+    target_days:
+      name: Target Days
+      description: Days to copy to (optional, defaults to same as source)
+      required: false
+      example: ["tue", "wed", "thu", "fri"]
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: "Monday"
+              value: "mon"
+            - label: "Tuesday"
+              value: "tue"
+            - label: "Wednesday"
+              value: "wed"
+            - label: "Thursday"
+              value: "thu"
+            - label: "Friday"
+              value: "fri"
+            - label: "Saturday"
+              value: "sat"
+            - label: "Sunday"
+              value: "sun"
