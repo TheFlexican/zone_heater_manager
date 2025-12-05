@@ -80,3 +80,105 @@ export const getLearningStats = async (areaId: string): Promise<LearningStats> =
   const response = await axios.get(`${API_BASE}/areas/${areaId}/learning`)
   return response.data.stats
 }
+
+// ========== v0.3.0 API Functions ==========
+
+// Preset Modes
+export const setPresetMode = async (
+  areaId: string,
+  presetMode: string
+): Promise<void> => {
+  await axios.post(`${API_BASE}/areas/${areaId}/preset_mode`, { preset_mode: presetMode })
+}
+
+// Boost Mode
+export const setBoostMode = async (
+  areaId: string,
+  duration: number,
+  temperature?: number
+): Promise<void> => {
+  const data: any = { duration }
+  if (temperature !== undefined) {
+    data.temperature = temperature
+  }
+  await axios.post(`${API_BASE}/areas/${areaId}/boost`, data)
+}
+
+export const cancelBoost = async (areaId: string): Promise<void> => {
+  await axios.post(`${API_BASE}/areas/${areaId}/cancel_boost`)
+}
+
+// Frost Protection (global)
+export const setFrostProtection = async (
+  enabled: boolean,
+  temperature: number
+): Promise<void> => {
+  await axios.post(`${API_BASE}/frost_protection`, {
+    enabled,
+    temperature
+  })
+}
+
+// Window Sensors
+export const addWindowSensor = async (
+  areaId: string,
+  sensorEntityId: string
+): Promise<void> => {
+  await axios.post(`${API_BASE}/areas/${areaId}/window_sensors`, {
+    sensor_entity_id: sensorEntityId
+  })
+}
+
+export const removeWindowSensor = async (
+  areaId: string,
+  sensorEntityId: string
+): Promise<void> => {
+  await axios.delete(`${API_BASE}/areas/${areaId}/window_sensors/${sensorEntityId}`)
+}
+
+// Presence Sensors
+export const addPresenceSensor = async (
+  areaId: string,
+  sensorEntityId: string
+): Promise<void> => {
+  await axios.post(`${API_BASE}/areas/${areaId}/presence_sensors`, {
+    sensor_entity_id: sensorEntityId
+  })
+}
+
+export const removePresenceSensor = async (
+  areaId: string,
+  sensorEntityId: string
+): Promise<void> => {
+  await axios.delete(`${API_BASE}/areas/${areaId}/presence_sensors/${sensorEntityId}`)
+}
+
+// HVAC Mode
+export const setHvacMode = async (
+  areaId: string,
+  hvacMode: string
+): Promise<void> => {
+  await axios.post(`${API_BASE}/areas/${areaId}/hvac_mode`, {
+    hvac_mode: hvacMode
+  })
+}
+
+// Schedule Copying
+export const copySchedule = async (
+  sourceAreaId: string,
+  targetAreaId: string,
+  sourceDays?: string[],
+  targetDays?: string[]
+): Promise<void> => {
+  const data: any = {
+    source_area_id: sourceAreaId,
+    target_area_id: targetAreaId
+  }
+  if (sourceDays) {
+    data.source_days = sourceDays
+  }
+  if (targetDays) {
+    data.target_days = targetDays
+  }
+  await axios.post(`${API_BASE}/copy_schedule`, data)
+}

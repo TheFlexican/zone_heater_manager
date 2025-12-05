@@ -31,13 +31,46 @@ export interface Zone {
   current_temperature?: number
   devices: Device[]
   schedules?: ScheduleEntry[]
+  
+  // Night boost settings
   night_boost_enabled?: boolean
   night_boost_offset?: number
   night_boost_start_time?: string
   night_boost_end_time?: string
+  
+  // Smart night boost settings
   smart_night_boost_enabled?: boolean
   smart_night_boost_target_time?: string
   weather_entity_id?: string
+  
+  // Preset mode settings
+  preset_mode?: string
+  away_temp?: number
+  eco_temp?: number
+  comfort_temp?: number
+  home_temp?: number
+  sleep_temp?: number
+  activity_temp?: number
+  
+  // Boost mode settings
+  boost_mode_active?: boolean
+  boost_duration?: number
+  boost_temp?: number
+  boost_end_time?: string
+  
+  // HVAC mode
+  hvac_mode?: string
+  
+  // Window sensor settings
+  window_sensors?: string[]
+  window_open_action_enabled?: boolean
+  window_open_temp_drop?: number
+  window_is_open?: boolean
+  
+  // Presence sensor settings
+  presence_sensors?: string[]
+  presence_temp_boost?: number
+  presence_detected?: boolean
 }
 
 // Alias Area to Zone for compatibility

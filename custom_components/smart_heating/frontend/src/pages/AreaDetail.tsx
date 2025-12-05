@@ -19,6 +19,10 @@ import {
   Divider,
   Alert,
   TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
@@ -31,7 +35,22 @@ import AcUnitIcon from '@mui/icons-material/AcUnit'
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew'
 import TuneIcon from '@mui/icons-material/Tune'
 import { Zone, Device } from '../types'
-import { getZones, getDevices, setZoneTemperature, enableZone, disableZone, removeDeviceFromZone } from '../api'
+import { 
+  getZones, 
+  getDevices, 
+  setZoneTemperature, 
+  enableZone, 
+  disableZone, 
+  removeDeviceFromZone,
+  setPresetMode,
+  setBoostMode,
+  cancelBoost,
+  setHvacMode,
+  addWindowSensor,
+  removeWindowSensor,
+  addPresenceSensor,
+  removePresenceSensor
+} from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
 import HistoryChart from '../components/HistoryChart'
 import { useWebSocket } from '../hooks/useWebSocket'
@@ -928,6 +947,287 @@ const ZoneDetail = () => {
                     </Typography>
                   </Box>
                 </Box>
+              </Box>
+            </Paper>
+
+            {/* v0.3.0 Features */}
+            
+            {/* Preset Modes */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom color="text.primary">
+                Preset Modes
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Quick temperature presets for different scenarios. Select a preset to instantly apply its temperature.
+              </Typography>
+              
+              <FormControl fullWidth sx={{ mt: 2 }}>
+                <InputLabel>Current Preset</InputLabel>
+                <Select
+                  value={area.preset_mode || 'none'}
+                  label="Current Preset"
+                  onChange={async (e) => {
+                    try {
+                      await setPresetMode(area.id, e.target.value)
+                      loadData()
+                    } catch (error) {
+                      console.error('Failed to set preset mode:', error)
+                    }
+                  }}
+                >
+                  <MenuItem value="none">None (Manual)</MenuItem>
+                  <MenuItem value="away">Away ({area.away_temp ?? 16}°C)</MenuItem>
+                  <MenuItem value="eco">Eco ({area.eco_temp ?? 18}°C)</MenuItem>
+                  <MenuItem value="comfort">Comfort ({area.comfort_temp ?? 22}°C)</MenuItem>
+                  <MenuItem value="home">Home ({area.home_temp ?? 21}°C)</MenuItem>
+                  <MenuItem value="sleep">Sleep ({area.sleep_temp ?? 19}°C)</MenuItem>
+                  <MenuItem value="activity">Activity ({area.activity_temp ?? 23}°C)</MenuItem>
+                  <MenuItem value="boost">Boost (See Boost Mode below)</MenuItem>
+                </Select>
+              </FormControl>
+
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Preset temperatures can be configured via Home Assistant services. Current preset: <strong>{area.preset_mode || 'none'}</strong>
+              </Alert>
+            </Paper>
+
+            {/* Boost Mode */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom color="text.primary">
+                Boost Mode
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Temporarily increase temperature for a specified duration. Boost mode automatically expires.
+              </Typography>
+              
+              {area.boost_mode_active ? (
+                <Box>
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    Boost mode is <strong>ACTIVE</strong>! Temperature: {area.boost_temp}°C, Duration: {area.boost_duration} minutes
+                  </Alert>
+                  <Button 
+                    variant="outlined" 
+                    color="error"
+                    onClick={async () => {
+                      try {
+                        await cancelBoost(area.id)
+                        loadData()
+                      } catch (error) {
+                        console.error('Failed to cancel boost:', error)
+                      }
+                    }}
+                  >
+                    Cancel Boost Mode
+                  </Button>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+                  <TextField
+                    label="Boost Temperature"
+                    type="number"
+                    defaultValue={25}
+                    inputProps={{ min: 15, max: 30, step: 0.5 }}
+                    sx={{ flex: 1 }}
+                    id="boost-temp-input"
+                  />
+                  <TextField
+                    label="Duration (minutes)"
+                    type="number"
+                    defaultValue={60}
+                    inputProps={{ min: 5, max: 180, step: 5 }}
+                    sx={{ flex: 1 }}
+                    id="boost-duration-input"
+                  />
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    onClick={async () => {
+                      try {
+                        const tempInput = document.getElementById('boost-temp-input') as HTMLInputElement
+                        const durationInput = document.getElementById('boost-duration-input') as HTMLInputElement
+                        const temp = parseFloat(tempInput.value)
+                        const duration = parseInt(durationInput.value)
+                        await setBoostMode(area.id, duration, temp)
+                        loadData()
+                      } catch (error) {
+                        console.error('Failed to activate boost:', error)
+                      }
+                    }}
+                  >
+                    Activate Boost
+                  </Button>
+                </Box>
+              )}
+            </Paper>
+
+            {/* HVAC Mode */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom color="text.primary">
+                HVAC Mode
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Control the heating/cooling mode for this area.
+              </Typography>
+              
+              <FormControl fullWidth>
+                <InputLabel>HVAC Mode</InputLabel>
+                <Select
+                  value={area.hvac_mode || 'heat'}
+                  label="HVAC Mode"
+                  onChange={async (e) => {
+                    try {
+                      await setHvacMode(area.id, e.target.value)
+                      loadData()
+                    } catch (error) {
+                      console.error('Failed to set HVAC mode:', error)
+                    }
+                  }}
+                >
+                  <MenuItem value="heat">Heat</MenuItem>
+                  <MenuItem value="cool">Cool</MenuItem>
+                  <MenuItem value="auto">Auto</MenuItem>
+                  <MenuItem value="off">Off</MenuItem>
+                </Select>
+              </FormControl>
+            </Paper>
+
+            {/* Window Sensors */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom color="text.primary">
+                Window Sensors
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Automatically reduce heating when windows are open. Configure binary sensors (window/door sensors).
+              </Typography>
+              
+              {area.window_sensors && area.window_sensors.length > 0 ? (
+                <List dense>
+                  {area.window_sensors.map((sensor) => (
+                    <ListItem
+                      key={sensor}
+                      secondaryAction={
+                        <IconButton
+                          edge="end"
+                          onClick={async () => {
+                            try {
+                              await removeWindowSensor(area.id, sensor)
+                              loadData()
+                            } catch (error) {
+                              console.error('Failed to remove window sensor:', error)
+                            }
+                          }}
+                        >
+                          <RemoveCircleOutlineIcon />
+                        </IconButton>
+                      }
+                    >
+                      <ListItemText 
+                        primary={sensor}
+                        secondary={`Temp drop: ${area.window_open_temp_drop ?? -5}°C when open`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Alert severity="info">
+                  No window sensors configured. Add binary sensors to enable window detection.
+                </Alert>
+              )}
+              
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <TextField
+                  label="Sensor Entity ID"
+                  placeholder="binary_sensor.window_living_room"
+                  fullWidth
+                  id="window-sensor-input"
+                />
+                <Button
+                  variant="outlined"
+                  onClick={async () => {
+                    try {
+                      const input = document.getElementById('window-sensor-input') as HTMLInputElement
+                      if (input.value) {
+                        await addWindowSensor(area.id, input.value)
+                        input.value = ''
+                        loadData()
+                      }
+                    } catch (error) {
+                      console.error('Failed to add window sensor:', error)
+                    }
+                  }}
+                >
+                  Add Sensor
+                </Button>
+              </Box>
+            </Paper>
+
+            {/* Presence Sensors */}
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom color="text.primary">
+                Presence Sensors
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Increase heating when presence/motion is detected. Configure binary sensors (motion/occupancy/presence sensors).
+              </Typography>
+              
+              {area.presence_sensors && area.presence_sensors.length > 0 ? (
+                <List dense>
+                  {area.presence_sensors.map((sensor) => (
+                    <ListItem
+                      key={sensor}
+                      secondaryAction={
+                        <IconButton
+                          edge="end"
+                          onClick={async () => {
+                            try {
+                              await removePresenceSensor(area.id, sensor)
+                              loadData()
+                            } catch (error) {
+                              console.error('Failed to remove presence sensor:', error)
+                            }
+                          }}
+                        >
+                          <RemoveCircleOutlineIcon />
+                        </IconButton>
+                      }
+                    >
+                      <ListItemText 
+                        primary={sensor}
+                        secondary={`Temp boost: +${area.presence_temp_boost ?? 2}°C when detected`}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Alert severity="info">
+                  No presence sensors configured. Add binary sensors to enable presence detection.
+                </Alert>
+              )}
+              
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <TextField
+                  label="Sensor Entity ID"
+                  placeholder="binary_sensor.motion_living_room"
+                  fullWidth
+                  id="presence-sensor-input"
+                />
+                <Button
+                  variant="outlined"
+                  onClick={async () => {
+                    try {
+                      const input = document.getElementById('presence-sensor-input') as HTMLInputElement
+                      if (input.value) {
+                        await addPresenceSensor(area.id, input.value)
+                        input.value = ''
+                        loadData()
+                      }
+                    } catch (error) {
+                      console.error('Failed to add presence sensor:', error)
+                    }
+                  }}
+                >
+                  Add Sensor
+                </Button>
               </Box>
             </Paper>
           </Box>
