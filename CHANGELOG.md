@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.2] - 2025-12-06
+
+### 🐛 Fixed
+- **WebSocket Schedule Bug**: Fixed schedules disappearing from frontend after WebSocket updates
+  - Coordinator now includes schedules in area data sent via WebSocket
+  - Previously, WebSocket updates overwrote area data without schedules
+  - Schedule tab now shows schedules consistently even after real-time updates
+
 ## [0.5.1] - 2025-12-06
 
 ### 📚 Documentation

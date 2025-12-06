@@ -269,6 +269,8 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
                     "current_temperature": area.current_temperature,
                     "device_count": len(area.devices),
                     "devices": devices_data,
+                    # Schedules
+                    "schedules": [s.to_dict() for s in area.schedules.values()],
                     # Preset mode settings
                     "preset_mode": area.preset_mode,
                     "away_temp": area.away_temp,
@@ -284,6 +286,8 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
                     "use_global_home": area.use_global_home,
                     "use_global_sleep": area.use_global_sleep,
                     "use_global_activity": area.use_global_activity,
+                    # Global presence flag
+                    "use_global_presence": area.use_global_presence,
                     # Boost mode
                     "boost_mode_active": area.boost_mode_active,
                     "boost_temp": area.boost_temp,
