@@ -597,12 +597,22 @@ class Area:
         # Priority 3: Preset mode temperature
         if self.preset_mode != PRESET_NONE and self.preset_mode != PRESET_BOOST:
             target = self.get_preset_temperature()
+            source = f"preset:{self.preset_mode}"
         else:
             # Priority 4: Schedule temperature (if available)
             target = self.get_active_schedule_temperature(current_time)
             if target is None:
                 # Priority 5: Base target temperature
                 target = self.target_temperature
+                source = "base_target"
+            else:
+                source = "schedule"
+        
+        # Log what we're starting with for debugging
+        _LOGGER.debug(
+            "Effective temp calculation for %s: source=%s, target=%.1f°C",
+            self.area_id, source, target
+        )
         
         # Priority 6: Apply night boost if enabled (additive)
         if self.night_boost_enabled:
@@ -631,13 +641,38 @@ class Area:
             # Night boost is meant to pre-heat BEFORE the morning schedule starts
             in_schedule = self.get_active_schedule_temperature(current_time) is not None
             
+            # Debug logging for troubleshooting
+            _LOGGER.debug(
+                "Night boost check for %s at %02d:%02d: period=%s-%s, is_active=%s, in_schedule=%s",
+                self.area_id, current_hour, current_min,
+                self.night_boost_start_time, self.night_boost_end_time,
+                is_active, in_schedule
+            )
+            
             if is_active and not in_schedule:
+                old_target = target
                 target += self.night_boost_offset
                 _LOGGER.debug(
                     "Night boost active for area %s (%s-%s): %.1f°C + %.1f°C = %.1f°C",
                     self.area_id, self.night_boost_start_time, self.night_boost_end_time,
-                    target - self.night_boost_offset, self.night_boost_offset, target
+                    old_target, self.night_boost_offset, target
                 )
+                # Log to area logger if available
+                if self.area_manager and hasattr(self.area_manager, 'hass'):
+                    area_logger = self.area_manager.hass.data.get("smart_heating", {}).get("area_logger")
+                    if area_logger:
+                        area_logger.log_event(
+                            self.area_id,
+                            "temperature",
+                            f"Night boost applied: +{self.night_boost_offset}°C",
+                            {
+                                "base_target": old_target,
+                                "boost_offset": self.night_boost_offset,
+                                "effective_target": target,
+                                "boost_period": f"{self.night_boost_start_time}-{self.night_boost_end_time}",
+                                "current_time": f"{current_hour:02d}:{current_min:02d}"
+                            }
+                        )
         
         # Note: Presence sensor actions are now handled by switching preset modes
         # (see climate_controller.py) rather than adjusting temperature directly
