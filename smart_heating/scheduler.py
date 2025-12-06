@@ -217,6 +217,17 @@ class ScheduleExecutor:
                 morning_schedule.start_time,
                 target_temp
             )
+            if hasattr(self, 'area_logger') and self.area_logger:
+                self.area_logger.log_event(
+                    area.area_id,
+                    "smart_boost",
+                    f"Smart night boost: targeting morning schedule at {morning_schedule.start_time}",
+                    {
+                        "target_time": morning_schedule.start_time,
+                        "target_temp": target_temp,
+                        "preset_mode": morning_schedule.preset_mode
+                    }
+                )
         elif area.smart_night_boost_target_time:
             # Fallback to configured target time
             target_hour, target_min = map(int, area.smart_night_boost_target_time.split(':'))
@@ -288,6 +299,18 @@ class ScheduleExecutor:
                 target_time.strftime("%H:%M"),
                 target_temp
             )
+            if hasattr(self, 'area_logger') and self.area_logger:
+                self.area_logger.log_event(
+                    area.area_id,
+                    "smart_boost",
+                    f"Smart night boost activated - predicted {predicted_minutes} min to reach {target_temp:.1f}°C",
+                    {
+                        "predicted_minutes": predicted_minutes,
+                        "target_time": target_time.strftime("%H:%M"),
+                        "target_temp": target_temp,
+                        "start_time": now.strftime("%H:%M")
+                    }
+                )
             # The climate controller will handle the actual heating
             # We just log the prediction here
         else:
@@ -388,6 +411,20 @@ class ScheduleExecutor:
                 schedule.end_time,
                 schedule.preset_mode,
             )
+            if hasattr(self, 'area_logger') and self.area_logger:
+                preset_temp = self._get_preset_temperature(area, schedule.preset_mode)
+                self.area_logger.log_event(
+                    area.area_id,
+                    "schedule",
+                    f"Schedule activated: {schedule.start_time}-{schedule.end_time} @ preset '{schedule.preset_mode}' ({preset_temp:.1f}°C)",
+                    {
+                        "schedule_id": schedule.schedule_id,
+                        "start_time": schedule.start_time,
+                        "end_time": schedule.end_time,
+                        "preset_mode": schedule.preset_mode,
+                        "preset_temp": preset_temp
+                    }
+                )
             
             # Set preset mode
             area.preset_mode = schedule.preset_mode
@@ -426,6 +463,18 @@ class ScheduleExecutor:
                 schedule.end_time,
                 target_temp,
             )
+            if hasattr(self, 'area_logger') and self.area_logger:
+                self.area_logger.log_event(
+                    area.area_id,
+                    "schedule",
+                    f"Schedule activated: {schedule.start_time}-{schedule.end_time} @ {target_temp}°C",
+                    {
+                        "schedule_id": schedule.schedule_id,
+                        "start_time": schedule.start_time,
+                        "end_time": schedule.end_time,
+                        "temperature": target_temp
+                    }
+                )
             
             # Update area target temperature
             area.target_temperature = target_temp

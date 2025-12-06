@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.4] - 2025-12-06
+
+### ✨ New Features - Development Logging System
+
+**Per-Area Logging**
+- **Dedicated Logs Tab**: New tab in area details showing comprehensive heating strategy logs
+  - Displays all heating decisions and events for development visibility
+  - Color-coded event type badges for easy identification
+  - Chronological order (newest first) with timestamps
+  - Detailed JSON data for each event showing exact parameters
+
+**Event Types Tracked**
+- **Temperature**: Target temperature calculations and effective temperature changes
+- **Heating**: Heating state changes (on/off) with current/target temperatures
+- **Schedule**: Schedule activations with preset modes or temperature values
+- **Smart Boost**: Smart night boost predictions, start times, and duration estimates
+- **Sensor**: Window and presence sensor state changes (open/closed, detected/not detected)
+- **Mode**: Manual override mode entries and exits
+
+**Filtering & Controls**
+- Filter dropdown to view specific event types or all events
+- Refresh button to reload logs on demand
+- Limit of 500 entries per area (memory-efficient with deque)
+- API endpoint: `GET /api/smart_heating/areas/{area_id}/logs?limit=N&type=EVENT_TYPE`
+
+**Backend Implementation**
+- New `AreaLogger` class with `log_event()`, `get_logs()`, `clear_logs()` methods
+- Integrated throughout climate controller and scheduler
+- Logs preserved in memory (development tool, not persisted to disk)
+
+### 🐛 Fixed
+- **Coordinator Lookup**: Fixed multiple `AttributeError` issues where `area_logger` was incorrectly identified as coordinator
+  - Updated exclusion lists in `api.py` (17 occurrences) and `websocket.py` (2 occurrences)
+  - WebSocket connections now work correctly without "unknown_error"
+  - Manual override and other API endpoints no longer fail with attribute errors
+
+### 🧪 Tests
+- **New E2E Test Suite**: `area-logs.spec.ts` with 10 comprehensive tests
+  - Tab visibility and navigation
+  - Log display and structure
+  - Filter functionality
+  - Refresh button
+  - Timestamp display
+  - Color-coded event chips
+  - JSON details display
+- **Updated Navigation Tests**: Added verification for all 7 tabs including new Logs tab
+
+### 📚 Documentation
+- Updated README.md with Development Logs feature description
+- Updated CHANGELOG.md with v0.5.4 release notes
+
 ## [0.5.3] - 2025-12-06
 
 ### ✨ Improved - Smart Night Boost & Schedule Integration

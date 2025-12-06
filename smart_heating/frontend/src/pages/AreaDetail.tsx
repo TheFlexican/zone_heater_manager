@@ -40,6 +40,7 @@ import SensorOccupiedIcon from '@mui/icons-material/SensorOccupied'
 import HistoryIcon from '@mui/icons-material/History'
 import SpeedIcon from '@mui/icons-material/Speed'
 import BookmarkIcon from '@mui/icons-material/Bookmark'
+import ArticleIcon from '@mui/icons-material/Article'
 import { Zone, WindowSensorConfig, PresenceSensorConfig, Device, GlobalPresets } from '../types'
 import { 
   getZones, 
@@ -63,7 +64,9 @@ import {
   getEntityState,
   getGlobalPresets,
   setAreaPresetConfig,
-  setAreaPresenceConfig
+  setAreaPresenceConfig,
+  getAreaLogs,
+  AreaLogEntry
 } from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
 import HistoryChart from '../components/HistoryChart'
@@ -110,6 +113,9 @@ const ZoneDetail = () => {
   const [sensorDialogOpen, setSensorDialogOpen] = useState(false)
   const [sensorDialogType, setSensorDialogType] = useState<'window' | 'presence'>('window')
   const [expandedCard, setExpandedCard] = useState<string | null>(null) // Accordion state
+  const [logs, setLogs] = useState<AreaLogEntry[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logFilter, setLogFilter] = useState<string>('all')
 
   // WebSocket for real-time updates
   useWebSocket({
@@ -260,6 +266,31 @@ const ZoneDetail = () => {
       console.error('Failed to load history config:', error)
     }
   }
+
+  const loadLogs = async () => {
+    if (!areaId) return
+    
+    try {
+      setLogsLoading(true)
+      const options: any = { limit: 100 }
+      if (logFilter !== 'all') {
+        options.type = logFilter
+      }
+      const logsData = await getAreaLogs(areaId, options)
+      setLogs(logsData)
+    } catch (error) {
+      console.error('Failed to load logs:', error)
+    } finally {
+      setLogsLoading(false)
+    }
+  }
+
+  // Load logs when tab is switched to Logs tab
+  useEffect(() => {
+    if (tabValue === 6) { // Logs tab index
+      loadLogs()
+    }
+  }, [tabValue, logFilter])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -1287,6 +1318,7 @@ const ZoneDetail = () => {
           <Tab label="History" />
           <Tab label="Settings" />
           <Tab label="Learning" />
+          <Tab label="Logs" icon={<ArticleIcon />} iconPosition="start" />
         </Tabs>
       </Paper>
 
@@ -1788,6 +1820,133 @@ const ZoneDetail = () => {
                     </Typography>
                   </Box>
                 </Box>
+              )}
+            </Paper>
+          </Box>
+        </TabPanel>
+
+        {/* Logs Tab */}
+        <TabPanel value={tabValue} index={6}>
+          <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
+            <Paper sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" color="text.primary">
+                  Heating Strategy Logs
+                </Typography>
+                <Button 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={loadLogs}
+                  disabled={logsLoading}
+                >
+                  {logsLoading ? 'Loading...' : 'Refresh'}
+                </Button>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Development log showing all heating strategy decisions for this area.
+              </Typography>
+
+              <Box sx={{ mb: 3 }}>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel>Filter by Type</InputLabel>
+                  <Select
+                    value={logFilter}
+                    label="Filter by Type"
+                    onChange={(e) => setLogFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All Events</MenuItem>
+                    <MenuItem value="temperature">Temperature</MenuItem>
+                    <MenuItem value="heating">Heating</MenuItem>
+                    <MenuItem value="schedule">Schedule</MenuItem>
+                    <MenuItem value="smart_boost">Smart Night Boost</MenuItem>
+                    <MenuItem value="sensor">Sensors</MenuItem>
+                    <MenuItem value="mode">Mode Changes</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {logsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : logs.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No log entries yet. Logs will appear as heating events occur.
+                  </Typography>
+                </Box>
+              ) : (
+                <List sx={{ bgcolor: 'background.paper' }}>
+                  {logs.map((log, index) => {
+                    const timestamp = new Date(log.timestamp)
+                    const timeStr = timestamp.toLocaleTimeString('nl-NL', { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      second: '2-digit'
+                    })
+                    const dateStr = timestamp.toLocaleDateString('nl-NL')
+                    
+                    // Color coding by event type
+                    const getEventColor = (type: string) => {
+                      switch (type) {
+                        case 'heating': return 'error'
+                        case 'temperature': return 'info'
+                        case 'schedule': return 'success'
+                        case 'smart_boost': return 'secondary'
+                        case 'sensor': return 'warning'
+                        case 'mode': return 'primary'
+                        default: return 'default'
+                      }
+                    }
+                    
+                    return (
+                      <Box key={index}>
+                        {index > 0 && <Divider />}
+                        <ListItem alignItems="flex-start" sx={{ py: 2 }}>
+                          <ListItemIcon sx={{ minWidth: 40, mt: 0.5 }}>
+                            <Chip 
+                              label={log.type} 
+                              color={getEventColor(log.type)}
+                              size="small"
+                              sx={{ fontSize: '0.7rem', height: 20 }}
+                            />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="body2" color="text.primary">
+                                  {log.message}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                                  {dateStr} {timeStr}
+                                </Typography>
+                              </Box>
+                            }
+                            secondary={
+                              log.details && Object.keys(log.details).length > 0 && (
+                                <Box 
+                                  component="pre" 
+                                  sx={{ 
+                                    mt: 1, 
+                                    p: 1, 
+                                    bgcolor: 'action.hover', 
+                                    borderRadius: 1,
+                                    fontSize: '0.75rem',
+                                    overflow: 'auto',
+                                    fontFamily: 'monospace'
+                                  }}
+                                >
+                                  {JSON.stringify(log.details, null, 2)}
+                                </Box>
+                              )
+                            }
+                          />
+                        </ListItem>
+                      </Box>
+                    )
+                  })}
+                </List>
               )}
             </Paper>
           </Box>

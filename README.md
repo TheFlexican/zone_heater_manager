@@ -62,6 +62,13 @@ A Home Assistant custom integration for managing multi-area heating systems with
   - Preset ranges: 6h, 12h, 24h, 3d, 7d, 30d
   - 5-minute data resolution (never aggregated)
   - Automatic cleanup every hour
+- 📝 **Development Logs** - Per-area logging system for debugging and visibility (v0.5.4+)
+  - Dedicated Logs tab in area details showing all heating strategy decisions
+  - Color-coded event types: Temperature, Heating, Schedule, Smart Boost, Sensors, Mode Changes
+  - Detailed JSON data for each log entry showing exact parameters
+  - Filterable by event type (all, temperature, heating, schedule, smart boost, sensors, mode)
+  - Real-time logging during development with 500-entry history per area
+  - Tracks: temperature changes, heating state changes, schedule activations, smart night boost predictions, sensor triggers, manual override mode
 - ⚙️ **Advanced Settings** - Hysteresis control, temperature limits, and fine-tuning
 - 🌐 **REST API** - Full API for programmatic control
 - 📡 **WebSocket support** - Real-time updates and state synchronization

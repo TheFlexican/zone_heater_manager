@@ -321,3 +321,30 @@ export const setAreaPresenceConfig = async (
 ): Promise<void> => {
   await axios.post(`${API_BASE}/areas/${areaId}/preset_config`, { use_global_presence: useGlobal })
 }
+
+// Area logging
+export interface AreaLogEntry {
+  timestamp: string
+  type: string
+  message: string
+  details: Record<string, any>
+}
+
+export const getAreaLogs = async (
+  areaId: string,
+  options?: {
+    limit?: number
+    type?: string
+  }
+): Promise<AreaLogEntry[]> => {
+  const params = new URLSearchParams()
+  if (options?.limit) {
+    params.append('limit', options.limit.toString())
+  }
+  if (options?.type) {
+    params.append('type', options.type)
+  }
+  
+  const response = await axios.get(`${API_BASE}/areas/${areaId}/logs?${params.toString()}`)
+  return response.data.logs
+}

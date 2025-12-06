@@ -25,4 +25,17 @@ test.describe('Navigation Tests', () => {
     await expect(page.locator('button:has-text("Schedule")')).toBeVisible();
     await expect(page.locator('button:has-text("Settings")')).toBeVisible();
   });
+
+  test('should have all tabs in area detail', async ({ page }) => {
+    await navigateToArea(page, 'Living Room');
+    
+    // Check all tabs are present
+    await expect(page.locator('button:has-text("Overview")')).toBeVisible();
+    await expect(page.locator('button:has-text("Devices")')).toBeVisible();
+    await expect(page.locator('button:has-text("Schedule")')).toBeVisible();
+    await expect(page.locator('button:has-text("History")')).toBeVisible();
+    await expect(page.locator('button:has-text("Settings")')).toBeVisible();
+    await expect(page.locator('button:has-text("Learning")')).toBeVisible();
+    await expect(page.locator('button:has-text("Logs")')).toBeVisible();
+  });
 });

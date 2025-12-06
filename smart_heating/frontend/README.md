@@ -128,6 +128,25 @@ See `src/types.ts` for all interface definitions:
   - Learning process explanation
   - API endpoint information
 
+### Development Logs (v0.5.4+)
+- **Per-Area Logging System**: Complete visibility into heating strategy decisions
+- **Dedicated Logs Tab**: Chronological log of all heating events
+- **Event Types Tracked**:
+  - Temperature: Target calculations and effective temperature changes
+  - Heating: State changes with current/target temperatures
+  - Schedule: Activations with preset modes or temperatures
+  - Smart Boost: Predictions, start times, duration estimates
+  - Sensor: Window and presence sensor state changes
+  - Mode: Manual override mode changes
+- **Interactive Features**:
+  - Filter dropdown for specific event types or all events
+  - Refresh button for on-demand log updates
+  - Color-coded event type badges (heating=red, temperature=blue, schedule=green, etc.)
+  - Detailed JSON data display for each event
+  - Timestamps with date and time
+- **Memory-Efficient**: 500-entry limit per area using deque
+- **API Integration**: `GET /api/smart_heating/areas/{area_id}/logs?limit=N&type=EVENT_TYPE`
+
 ### Temperature History
 - **Configurable Retention**: 1-365 days (default: 30 days)
 - **Recording Interval**: Every 5 minutes (fixed)

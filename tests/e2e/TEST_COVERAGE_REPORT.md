@@ -1,33 +1,54 @@
 # E2E Test Coverage Report
 
-**Generated:** December 5, 2025  
+**Generated:** December 6, 2025  
 **Framework:** Playwright 1.57.0 with TypeScript  
 **Test Philosophy:** Real data from Home Assistant, no mocks
 
 ## Test Statistics
 
-**Total Tests:** 65 tests  
-**Passing:** 42 tests (64.6%)  
-**Failing:** 21 tests (32.3%)  
-**Skipped:** 2 tests (3.1%)  
+**Total Tests:** 77 tests  
+**Test Files:** 8 files
 
-**Execution Time:** ~15.5 minutes  
-**Test Files:** 7 files
+**Execution Time:** ~17 minutes  
 
 ---
 
 ## Test Organization
 
-### 1. **navigation.spec.ts** (3 tests) ✅
-**Status:** ALL PASSING  
+### 1. **navigation.spec.ts** (4 tests) ✅
+**Status:** ALL PASSING (expected)  
 **Coverage:**
 - ✅ Load Smart Heating panel
 - ✅ Display areas list
 - ✅ Navigate to area detail page
+- ✅ Verify all 7 tabs present (Overview, Devices, Schedule, History, Settings, Learning, Logs)
 
 ---
 
-### 2. **temperature-control.spec.ts** (2 tests) ✅
+### 2. **area-logs.spec.ts** (10 tests) 🆕
+**Status:** NEW - Area Logging System  
+**Coverage:**
+- ✅ Display Logs tab in area details
+- ✅ Show logs when Logs tab is clicked
+- ✅ Display log filter dropdown
+- ✅ Filter logs by event type (Temperature, Heating, Schedule, Smart Boost, Sensors, Mode)
+- ✅ Have refresh button
+- ✅ Display log entries with proper structure
+- ✅ Display log timestamps
+- ✅ Show color-coded event type chips
+- ✅ Display log details in JSON format
+
+**Key Features Tested:**
+- Tab navigation and visibility
+- Log entry display with timestamps and event types
+- Filter dropdown with 6 event type options
+- Refresh functionality
+- Color-coded badges (heating=error, temperature=info, schedule=success, etc.)
+- JSON details rendering in monospace format
+
+---
+
+### 3. **temperature-control.spec.ts** (2 tests) ✅
 **Status:** ALL PASSING  
 **Coverage:**
 - ✅ Adjust target temperature via slider

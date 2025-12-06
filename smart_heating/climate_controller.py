@@ -209,8 +209,22 @@ class ClimateController:
                     area.window_is_open = any_window_open
                     if any_window_open:
                         _LOGGER.info("Window(s) opened in area %s - temperature adjustment active", area_id)
+                        if hasattr(self, 'area_logger') and self.area_logger:
+                            self.area_logger.log_event(
+                                area_id,
+                                "sensor",
+                                "Window opened - temperature adjustment active",
+                                {"sensor_type": "window", "state": "open"}
+                            )
                     else:
                         _LOGGER.info("All windows closed in area %s - normal heating resumed", area_id)
+                        if hasattr(self, 'area_logger') and self.area_logger:
+                            self.area_logger.log_event(
+                                area_id,
+                                "sensor",
+                                "All windows closed - normal heating resumed",
+                                {"sensor_type": "window", "state": "closed"}
+                            )
             
             # Update presence sensor states
             # Use global presence sensors if enabled, otherwise use area-specific
@@ -239,8 +253,22 @@ class ClimateController:
                     area.presence_detected = any_presence_detected
                     if any_presence_detected:
                         _LOGGER.info("Presence detected in area %s - temperature boost active", area_id)
+                        if hasattr(self, 'area_logger') and self.area_logger:
+                            self.area_logger.log_event(
+                                area_id,
+                                "sensor",
+                                "Presence detected - temperature boost active",
+                                {"sensor_type": "presence", "state": "detected"}
+                            )
                     else:
                         _LOGGER.info("No presence in area %s - boost removed", area_id)
+                        if hasattr(self, 'area_logger') and self.area_logger:
+                            self.area_logger.log_event(
+                                area_id,
+                                "sensor",
+                                "No presence detected - boost removed",
+                                {"sensor_type": "presence", "state": "not_detected"}
+                            )
 
 
     async def async_control_heating(self) -> None:
@@ -286,6 +314,13 @@ class ClimateController:
                     area_id
                 )
                 area.state = "manual"  # Set state to manual
+                if hasattr(self, 'area_logger') and self.area_logger:
+                    self.area_logger.log_event(
+                        area_id,
+                        "mode",
+                        "Manual override mode active - user control",
+                        {"mode": "manual_override"}
+                    )
                 
                 # Still control switches/pumps based on actual heating state
                 # Check if thermostat is actually heating
@@ -309,6 +344,19 @@ class ClimateController:
                 "Area %s: Effective target=%.1f°C (boost_active=%s, preset=%s, base_target=%.1f°C)",
                 area_id, target_temp, area.boost_mode_active, area.preset_mode, area.target_temperature
             )
+            if hasattr(self, 'area_logger') and self.area_logger:
+                details = {
+                    "target_temp": target_temp,
+                    "boost_active": area.boost_mode_active,
+                    "preset_mode": area.preset_mode,
+                    "base_target": area.target_temperature
+                }
+                self.area_logger.log_event(
+                    area_id,
+                    "temperature",
+                    f"Effective target temperature: {target_temp:.1f}°C",
+                    details
+                )
             
             # Apply frost protection if enabled (global setting)
             if self.area_manager.frost_protection_enabled:
@@ -366,6 +414,17 @@ class ClimateController:
                     "Area %s: Heating ON (current: %.1f°C, target: %.1f°C)",
                     area_id, current_temp, target_temp
                 )
+                if hasattr(self, 'area_logger') and self.area_logger:
+                    self.area_logger.log_event(
+                        area_id,
+                        "heating",
+                        f"Heating started - reaching {target_temp:.1f}°C",
+                        {
+                            "current_temp": current_temp,
+                            "target_temp": target_temp,
+                            "state": "heating"
+                        }
+                    )
             elif should_stop:
                 # End heating event if active and learning engine available
                 if self.learning_engine and area_id in self._area_heating_events:
@@ -387,6 +446,17 @@ class ClimateController:
                     "Area %s: Heating OFF (current: %.1f°C, target: %.1f°C)",
                     area_id, current_temp, target_temp
                 )
+                if hasattr(self, 'area_logger') and self.area_logger:
+                    self.area_logger.log_event(
+                        area_id,
+                        "heating",
+                        f"Heating stopped - target {target_temp:.1f}°C reached",
+                        {
+                            "current_temp": current_temp,
+                            "target_temp": target_temp,
+                            "state": "idle"
+                        }
+                    )
         
         # Control OpenTherm gateway (boiler) based on aggregated demand
         await self._async_control_opentherm_gateway(len(heating_areas) > 0, max_target_temp)

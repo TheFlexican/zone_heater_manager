@@ -80,6 +80,7 @@ from .climate_controller import ClimateController
 from .scheduler import ScheduleExecutor
 from .history import HistoryTracker
 from .learning_engine import LearningEngine
+from .area_logger import AreaLogger
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -125,6 +126,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await history_tracker.async_load()
     hass.data[DOMAIN]["history"] = history_tracker
     
+    # Create area logger for development logging
+    area_logger = AreaLogger()
+    hass.data[DOMAIN]["area_logger"] = area_logger
+    _LOGGER.info("Area logger initialized")
+    
     # Create learning engine
     learning_engine = LearningEngine(hass)
     hass.data[DOMAIN]["learning_engine"] = learning_engine
@@ -142,6 +148,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Create and start climate controller
     climate_controller = ClimateController(hass, area_manager, learning_engine)
+    
+    # Pass area_logger to climate controller
+    climate_controller.area_logger = area_logger
     
     # Store climate controller
     hass.data[DOMAIN]["climate_controller"] = climate_controller
@@ -170,6 +179,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Create and start schedule executor
     schedule_executor = ScheduleExecutor(hass, area_manager, learning_engine)
+    
+    # Pass area_logger to schedule executor
+    schedule_executor.area_logger = area_logger
+    
     hass.data[DOMAIN]["schedule_executor"] = schedule_executor
     await schedule_executor.async_start()
     _LOGGER.info("Schedule executor started")
