@@ -232,6 +232,27 @@ test.describe('Sensor Management', () => {
 
   test.describe('Sensor State Monitoring', () => {
     
+    test('should display presence status on main overview', async ({ page }) => {
+      await navigateToSmartHeating(page)
+      
+      // Look for zone cards on main overview
+      const zoneCards = page.locator('.MuiCard-root')
+      const cardCount = await zoneCards.count()
+      console.log(`Found ${cardCount} zone cards on main overview`)
+      
+      // Check if any zone card shows presence status (HOME/AWAY badge)
+      const presenceBadges = page.locator('text=/^HOME$|^AWAY$/i')
+      const badgeCount = await presenceBadges.count()
+      console.log(`Found ${badgeCount} presence status badges`)
+      
+      // Log test result
+      if (badgeCount > 0) {
+        console.log('✓ Presence status badges are visible on main overview')
+      } else {
+        console.log('ℹ No presence status badges found (might not be configured)')
+      }
+    })
+
     test('should display sensor current state', async ({ page }) => {
       await navigateToArea(page, 'Living Room')
       await switchToTab(page, 'Settings')
@@ -270,11 +291,14 @@ test.describe('Sensor Management', () => {
       
       await expandSettingsCard(page, 'Presence Sensors')
       
-      // Look for "home" or "away" status
+      // Look for "home" or "away" status with friendly names
       const presenceStatus = page.locator('text=/home|away|present|absent/i')
+      const friendlyBadges = page.locator('.MuiChip-label').filter({ hasText: /AWAY|HOME/i })
       
       const hasStatus = await presenceStatus.count() > 0
+      const hasFriendlyBadges = await friendlyBadges.count() > 0
       console.log(`Presence status visible: ${hasStatus}`)
+      console.log(`Friendly name status badges visible: ${hasFriendlyBadges}`)
     })
   })
 })

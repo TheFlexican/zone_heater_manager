@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -27,8 +27,9 @@ import TuneIcon from '@mui/icons-material/Tune'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import PersonIcon from '@mui/icons-material/Person'
 import { Zone } from '../types'
-import { setZoneTemperature, removeDeviceFromZone, hideZone, unhideZone } from '../api'
+import { setZoneTemperature, removeDeviceFromZone, hideZone, unhideZone, getEntityState } from '../api'
 
 interface ZoneCardProps {
   area: Zone
@@ -39,6 +40,22 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
   const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [temperature, setTemperature] = useState(area.target_temperature)
+  const [presenceState, setPresenceState] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadPresenceState = async () => {
+      if (area.presence_sensors && area.presence_sensors.length > 0) {
+        try {
+          const firstSensor = area.presence_sensors[0]
+          const state = await getEntityState(firstSensor.entity_id)
+          setPresenceState(state.state)
+        } catch (error) {
+          console.error('Failed to load presence state:', error)
+        }
+      }
+    }
+    loadPresenceState()
+  }, [area.presence_sensors])
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation()
@@ -201,12 +218,22 @@ const ZoneCard = ({ area, onUpdate }: ZoneCardProps) => {
             <Typography variant="h6" gutterBottom>
               {area.name}
             </Typography>
-            <Chip
-              icon={getStateIcon()}
-              label={area.state.toUpperCase()}
-              color={getStateColor()}
-              size="small"
-            />
+            <Box display="flex" gap={1} flexWrap="wrap">
+              <Chip
+                icon={getStateIcon()}
+                label={area.state.toUpperCase()}
+                color={getStateColor()}
+                size="small"
+              />
+              {area.presence_sensors && area.presence_sensors.length > 0 && presenceState && (
+                <Chip
+                  icon={<PersonIcon />}
+                  label={presenceState.toUpperCase()}
+                  color={presenceState === 'home' ? 'success' : 'default'}
+                  size="small"
+                />
+              )}
+            </Box>
           </Box>
           <Box onClick={(e) => e.stopPropagation()}>
             <IconButton size="small" onClick={handleMenuOpen}>

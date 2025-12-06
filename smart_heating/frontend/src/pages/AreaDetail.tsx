@@ -58,7 +58,8 @@ import {
   setHistoryRetention,
   getDevices,
   addDeviceToZone,
-  removeDeviceFromZone
+  removeDeviceFromZone,
+  getEntityState
 } from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
 import HistoryChart from '../components/HistoryChart'
@@ -95,6 +96,7 @@ const ZoneDetail = () => {
   const [availableDevices, setAvailableDevices] = useState<Device[]>([])
   const [showOnlyHeating, setShowOnlyHeating] = useState(true)
   const [deviceSearch, setDeviceSearch] = useState('')
+  const [entityStates, setEntityStates] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [tabValue, setTabValue] = useState(0)
   const [temperature, setTemperature] = useState(21)
@@ -142,12 +144,51 @@ const ZoneDetail = () => {
       setZone(currentZone)
       setTemperature(currentZone.target_temperature)
       
+      // Load entity states for presence/window sensors
+      await loadEntityStates(currentZone)
+      
       // Load available devices
       await loadAvailableDevices(currentZone)
     } catch (error) {
       console.error('Failed to load area:', error)
     } finally {
       setLoading(false)
+    }
+  }
+  
+  const loadEntityStates = async (currentZone: Zone) => {
+    try {
+      const states: Record<string, any> = {}
+      
+      // Load presence sensor states and names
+      if (currentZone.presence_sensors) {
+        for (const sensor of currentZone.presence_sensors) {
+          const entity_id = typeof sensor === 'string' ? sensor : sensor.entity_id
+          try {
+            const state = await getEntityState(entity_id)
+            states[entity_id] = state
+          } catch (error) {
+            console.error(`Failed to load state for ${entity_id}:`, error)
+          }
+        }
+      }
+      
+      // Load window sensor states and names
+      if (currentZone.window_sensors) {
+        for (const sensor of currentZone.window_sensors) {
+          const entity_id = typeof sensor === 'string' ? sensor : sensor.entity_id
+          try {
+            const state = await getEntityState(entity_id)
+            states[entity_id] = state
+          } catch (error) {
+            console.error(`Failed to load state for ${entity_id}:`, error)
+          }
+        }
+      }
+      
+      setEntityStates(states)
+    } catch (error) {
+      console.error('Failed to load entity states:', error)
     }
   }
   
@@ -547,6 +588,12 @@ const ZoneDetail = () => {
                     homeText = 'No action'
                   }
                   
+                  const entityState = entityStates[sensorConfig.entity_id]
+                  const friendlyName = entityState?.attributes?.friendly_name || sensorConfig.entity_id
+                  const state = entityState?.state || 'unknown'
+                  const isAway = state === 'not_home' || state === 'off' || state === 'away'
+                  const isActive = isAway || state === 'home' || state === 'on'
+                  
                   return (
                     <ListItem
                       key={sensorConfig.entity_id}
@@ -567,7 +614,19 @@ const ZoneDetail = () => {
                       }
                     >
                       <ListItemText 
-                        primary={sensorConfig.entity_id}
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography>{friendlyName}</Typography>
+                            {isActive && (
+                              <Chip 
+                                label={isAway ? 'AWAY' : 'HOME'} 
+                                size="small" 
+                                color={isAway ? 'warning' : 'success'}
+                                sx={{ height: '20px', fontSize: '0.7rem' }}
+                              />
+                            )}
+                          </Box>
+                        }
                         secondary={
                           <>
                             <Typography component="span" variant="body2" color="text.secondary" display="block">

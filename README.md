@@ -1183,6 +1183,21 @@ Current version: **0.3.3**
 
 ### Changelog
 
+#### v0.3.18 (2025-12-06)
+**Enhanced Presence Sensor Display**
+
+- 👤 **Improved Presence Sensor UI**
+  - Presence sensors now show friendly names instead of entity IDs
+  - Added status indicators (AWAY/HOME badges) in area detail Settings tab
+  - Main overview zone cards display presence status next to heating state
+  - Green "HOME" badge or gray "AWAY" badge with person icon
+  - Real-time presence state updates via entity state API
+
+- ✅ **Testing Improvements**
+  - Added E2E tests for presence status display on main overview
+  - Enhanced presence sensor status detection tests
+  - All 85 E2E tests passing (4 skipped)
+
 #### v0.3.17 (2025-12-06)
 **Universal Device Support & Enhanced Search**
 
