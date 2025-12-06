@@ -45,6 +45,48 @@ smart_heating/
 └── .gitignore                # Git ignore rules
 ```
 
+## E2E Testing
+
+Smart Heating includes comprehensive end-to-end tests using Playwright:
+
+```bash
+cd tests/e2e
+npm test                    # Run all tests
+npm test -- --headed        # Run with browser visible
+npm test -- --debug         # Run in debug mode
+```
+
+**Test Files:**
+- `navigation.spec.ts` - Navigation and UI tests
+- `temperature-control.spec.ts` - Temperature adjustment tests
+- `boost-mode.spec.ts` - Boost mode functionality
+- `manual-override.spec.ts` - Manual override detection (5 tests)
+- `switch-shutdown-control.spec.ts` - Switch/pump control (6 tests)
+- `comprehensive-features.spec.ts` - Full feature coverage
+- `sensor-management.spec.ts` - Sensor integration tests
+- `backend-logging.spec.ts` - Backend logging verification
+
+**Test Coverage:**
+- 100 total tests
+- 96 passing tests
+- 4 skipped tests (preset-modes, sensors)
+
+**Writing Tests:**
+
+Use helper functions for common operations:
+```typescript
+import { navigateToSmartHeating, navigateToArea, switchToTab, 
+         expandSettingsCard, dismissSnackbar } from './helpers'
+
+test('my test', async ({ page }) => {
+  await navigateToSmartHeating(page)
+  await navigateToArea(page, 'Living Room')
+  await switchToTab(page, 'Settings')
+  await expandSettingsCard(page, 'Switch/Pump Control')
+  await dismissSnackbar(page)
+})
+```
+
 ## Common Tasks
 
 ### Adding a New Service

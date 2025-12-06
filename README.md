@@ -30,6 +30,10 @@ A Home Assistant custom integration for managing multi-area heating systems with
 - ⚡ **Boost Mode** - Temporary high-temperature boost with configurable duration
 - 🪟 **Window Sensor Integration** - Configurable actions (turn off, reduce temp, or none) when windows/doors open with custom temperature drops
 - 👤 **Presence Detection** - Advanced presence-based heating with separate away/home actions, supports motion sensors, Person entities, and Device Trackers
+- 🔌 **Smart Switch Control** - Per-area control to turn off switches/pumps when not heating (v0.4.2+)
+  - Energy efficient: Automatically shuts down circulation pumps when heating stops
+  - Always-on mode: Keep pumps running continuously for systems requiring constant circulation
+  - Works in manual override mode: Switches controlled based on actual thermostat heating state
 - ❄️ **Frost Protection** - Global minimum temperature to prevent freezing
 - 🌡️ **HVAC Modes** - Support for heating, cooling, auto, and off modes
 - 📋 **Schedule Copying** - Duplicate schedules between areas and days
@@ -344,6 +348,80 @@ Preset modes override schedules. Priority order:
 4. Schedule temperature
 5. Manual target temperature
 6. Night boost (additive)
+
+### Smart Switch/Pump Control (v0.4.2+)
+
+Automatically manage circulation pumps, relays, and zone valves to save energy when heating is not needed.
+
+**How It Works:**
+
+By default, switches and pumps assigned to an area are automatically turned **OFF** when the area is not actively heating and turned **ON** when heating is needed. This saves energy and reduces wear on equipment.
+
+**Configuration:**
+
+Each area has a configurable switch control mode in **Settings → Switch/Pump Control**:
+
+- **Auto Off (Default)** - Switches/pumps automatically turn off when not heating
+  - Badge: `Auto Off`
+  - Energy efficient: Pumps only run when needed
+  - Extends equipment lifespan
+  
+- **Always On** - Switches/pumps stay on continuously
+  - Badge: `Always On`
+  - For systems requiring constant circulation
+  - Useful for balanced heating systems
+
+**Intelligent Control:**
+
+The switch control system is intelligent and works even in manual override mode:
+
+```
+Manual Override Mode:
+- Thermostat heating? → Switches ON
+- Thermostat idle? → Switches OFF (if Auto Off enabled)
+```
+
+This means switches are controlled based on the **actual heating state** of your thermostat, not the app's schedule. If you manually adjust your Google Nest thermostat and it starts heating, the circulation pump will automatically turn on.
+
+**API Control:**
+
+```bash
+# Enable auto-shutdown
+POST /api/smart_heating/areas/living_room/switch_shutdown
+{"enabled": true}
+
+# Keep switches always on
+POST /api/smart_heating/areas/living_room/switch_shutdown
+{"enabled": false}
+```
+
+**Use Cases:**
+
+✅ **Auto Off Mode:**
+- Floor heating circulation pumps
+- Zone valve relays
+- Auxiliary heating switches
+- Areas with on-demand heating
+
+❌ **Always On Mode:**
+- Balanced heating systems
+- Systems requiring constant flow
+- Pumps with anti-seizing requirements
+- Complex multi-zone systems
+
+**Device Types:**
+
+Works with all switch entities:
+- `switch.floor_heating_pump`
+- `switch.zone_valve_relay`
+- `switch.circulation_pump`
+- Any switch assigned to an area
+
+**Visual Feedback:**
+
+- Badge displays current mode in Settings accordion
+- Orange "MANUAL" badge when thermostat manually adjusted
+- Switches controlled based on thermostat hvac_action
 7. Presence boost (additive)
 
 ### Boost Mode

@@ -487,7 +487,7 @@ const ZoneDetail = () => {
         title: 'Switch/Pump Control',
         description: 'Control how switches and pumps behave when area is not heating',
         icon: <PowerSettingsNewIcon />,
-        badge: area.shutdown_switches_when_idle ? 'Auto Off' : 'Always On',
+        badge: (area.shutdown_switches_when_idle ?? true) ? 'Auto Off' : 'Always On',
         defaultExpanded: false,
         content: (
           <Box>

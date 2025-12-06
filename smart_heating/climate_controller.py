@@ -273,10 +273,25 @@ class ClimateController:
             # Check for manual override mode
             if hasattr(area, 'manual_override') and area.manual_override:
                 _LOGGER.info(
-                    "Area %s in MANUAL OVERRIDE mode - skipping climate control (thermostat is user-controlled)",
+                    "Area %s in MANUAL OVERRIDE mode - skipping thermostat control but managing switches",
                     area_id
                 )
                 area.state = "manual"  # Set state to manual
+                
+                # Still control switches/pumps based on actual heating state
+                # Check if thermostat is actually heating
+                is_heating = False
+                for device_id, device_data in area.devices.items():
+                    if device_data.get("type") == "thermostat":
+                        state = self.hass.states.get(device_id)
+                        if state and state.attributes.get("hvac_action") == "heating":
+                            is_heating = True
+                            break
+                
+                # Control switches based on actual heating state
+                await self._async_control_switches(area, is_heating)
+                
+                # Skip rest of climate control logic
                 continue
             
             # Get effective target (considering schedules and night boost)

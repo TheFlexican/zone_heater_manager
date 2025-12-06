@@ -94,7 +94,6 @@ Schedule:
   - temperature: float
   - days: List[str] (mon, tue, etc.) [legacy]
   - enabled: bool
-  # Note: Supports both old and new formats with automatic conversion
 
 Device:
   - id: str

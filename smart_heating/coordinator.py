@@ -286,6 +286,8 @@ class SmartHeatingCoordinator(DataUpdateCoordinator):
                     "manual_override": getattr(area, 'manual_override', False),
                     # Hidden state (frontend-only, but persisted in backend)
                     "hidden": getattr(area, 'hidden', False),
+                    # Switch/pump control
+                    "shutdown_switches_when_idle": getattr(area, 'shutdown_switches_when_idle', True),
                     # Sensors
                     "window_sensors": area.window_sensors,
                     "presence_sensors": area.presence_sensors,

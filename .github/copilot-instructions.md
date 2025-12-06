@@ -15,6 +15,13 @@ Home Assistant integration for zone-based heating control with learning capabili
 - Run `cd tests/e2e && npm test` after ALL code changes
 - All tests must pass (100%) before committing
 
+**RULE #3: Git Operations Require User Approval**
+- **NEVER** commit code without user testing and approval first
+- **NEVER** create git tags without explicit user request
+- **NEVER** push to GitHub without user confirmation
+- After implementing features: Deploy → Let user test → Wait for approval → THEN commit/tag/push
+- Workflow: Code → Deploy → Test → Approve → Git operations
+
 ## Key Directories
 ```
 smart_heating/          # Main integration (backend .py files + frontend/)
@@ -76,8 +83,9 @@ Real-time updates via `smart_heating/subscribe` event type
 ### Adding Features
 1. **Backend:** Update coordinator, add API endpoint, update services.yaml
 2. **Frontend:** Add types, API functions, UI components, WebSocket subscriptions
-3. **Deploy:** `./sync.sh` → Clear cache (Cmd+Shift+R) → Test
-4. **E2E:** Add tests, run `cd tests/e2e && npm test`
+3. **Deploy:** `./sync.sh` → Clear cache (Cmd+Shift+R) → **WAIT FOR USER TO TEST**
+4. **After user approval:** Run E2E tests if needed
+5. **After user confirms:** Ask before committing/tagging/pushing to git
 
 ### Debugging
 - Browser: Check Network/Console tabs
