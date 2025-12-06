@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-06
+
+### ✨ Added - Schedule Presets, Cross-Day Schedules & Global Presence Sensors
+
+**Schedule Preset Mode Selection**
+- **Preset-Based Schedules**: Schedules can now set preset modes instead of fixed temperatures
+  - Choose between "Fixed Temperature" or "Preset Mode" when creating/editing schedules
+  - All standard preset modes available: Away, Eco, Comfort, Home, Sleep, Activity
+  - Combines scheduling flexibility with preset temperature management
+  - Respects global/custom preset configuration per area
+
+**Cross-Day Schedule Support**
+- **Midnight Crossover**: Schedules can now span across midnight
+  - Example: Saturday 22:00 - Sunday 07:00 works correctly
+  - Scheduler checks both current day and previous day for active schedules
+  - End time before start time automatically indicates cross-day schedule
+  - Proper validation ensures schedule is active during intended hours
+
+**Global Presence Sensor Configuration**
+- **Centralized Presence Management**: Configure presence sensors globally in Settings
+  - Add/remove presence sensors that apply to all areas using them
+  - Person entities, device trackers, motion sensors supported
+  - Configure once, apply to multiple areas
+
+**Per-Area Presence Configuration**
+- **Toggle Control**: Each area can choose global or area-specific presence sensors
+  - "Use Global Presence Sensors" toggle in Area Detail → Presence Configuration
+  - Override with area-specific sensors when needed
+  - Real-time switching between global and area-specific detection
+  - Visual indication of which sensor set is active
+
+**Climate Controller Integration**
+- Climate controller respects `use_global_presence` flag
+- Automatically selects correct sensor list (global vs area-specific)
+- Presence detection behavior unchanged, just more flexible configuration
+
+**API Enhancements**
+- Added `/api/smart_heating/global_presence` GET/POST endpoints
+- Added `/api/smart_heating/areas/{id}/presence_config` POST endpoint
+- Enhanced schedule validation: accepts both `time` and `start_time` fields
+- Area responses include `use_global_presence` and all `use_global_*` flags
+- Schedule entries support optional `preset_mode` field
+
+**Frontend Improvements**
+- **Global Settings Page**: New "Global Presence Sensors" section
+- **Area Detail Page**: New "Presence Configuration" section with toggle
+- **Schedule Editor**: Mode selector toggle between temperature and preset modes
+- **Alphabetical Sorting**: Area cards in zones overview now sorted alphabetically (prevents dynamic reordering)
+
+**Affected Files:**
+- Backend: `area_manager.py`, `scheduler.py`, `api.py`, `climate_controller.py`
+- Frontend: `types.ts`, `api.ts`, `ScheduleEditor.tsx`, `GlobalSettings.tsx`, `AreaDetail.tsx`, `ZoneList.tsx`
+- Configuration: `manifest.json` (version bump to 0.5.0)
+
+### 🐛 Fixed
+- Schedule API validation failing on missing `time` field (now accepts `time` or `start_time`)
+- Toggle switch not responding due to missing `use_global_presence` in API responses
+- Climate controller not using global presence sensors even when flag was set
+- Area cards dynamically reordering in zones overview due to WebSocket updates
+
+### 🔧 Changed
+- Area cards now maintain alphabetical order regardless of state updates
+- Schedule data model enhanced with optional `preset_mode` field
+- Area data model includes `use_global_presence` flag with persistence
+
 ### ✨ Added - Global Preset Temperatures (v0.4.3)
 
 **Global Preset System**

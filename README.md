@@ -20,6 +20,10 @@ A Home Assistant custom integration for managing multi-area heating systems with
   - Automatically clears when temperature adjusted via app
   - Persists across restarts
 - 📅 **Smart Scheduling** - Time-based temperature profiles with day-of-week selection
+  - **Preset Mode Schedules** - Set preset modes (Away, Eco, Comfort, etc.) instead of fixed temperatures (v0.5.0+)
+  - **Cross-Day Support** - Schedules can span midnight (e.g., Saturday 22:00 - Sunday 07:00) (v0.5.0+)
+  - Toggle between temperature-based and preset-based scheduling
+  - Combine with global preset temperatures for maximum flexibility
 - 🌙 **Night Boost** - Configurable temperature increase during night hours (customizable start/end times)
 - 🧠 **Adaptive Learning** - Machine learning system that learns heating patterns and weather correlation
   - Automatically predicts heating time based on outdoor temperature
@@ -37,6 +41,8 @@ A Home Assistant custom integration for managing multi-area heating systems with
   - Returns to "Home" preset when someone arrives
   - Works with Person entities, Device Trackers, and motion sensors
   - No manual temperature adjustments - uses your configured preset temperatures
+  - **Global Presence Sensors** - Configure sensors once, apply to all areas (v0.5.0+)
+  - **Per-Area Toggle** - Choose global or area-specific presence detection per area (v0.5.0+)
 - 🔌 **Smart Switch Control** - Per-area control to turn off switches/pumps when not heating (v0.4.2+)
   - Energy efficient: Automatically shuts down circulation pumps when heating stops
   - Always-on mode: Keep pumps running continuously for systems requiring constant circulation
@@ -588,18 +594,31 @@ GET /api/smart_heating/areas/living_room/history
 
 ### Presence Detection
 
-Boost temperature when presence/motion is detected for enhanced comfort.
+Automatically switch between preset modes based on occupancy for enhanced comfort and energy savings.
 
-**How It Works:**
-1. Add presence/motion sensors to an area
-2. When motion detected → automatic temperature boost (default: +2°C)
-3. When no presence → boost removed
-4. Works additively with other temperature settings
-5. Ideal for rooms used intermittently
+**How It Works (v0.4.3+):**
+1. Add presence sensors to an area (or use global sensors)
+2. When nobody home → switches to "Away" preset
+3. When someone arrives → switches to "Home" preset
+4. Uses your configured preset temperatures (global or custom per area)
+5. No manual temperature adjustments - clean preset mode switching
 
-**Configuration:**
+**Global Presence Configuration (v0.5.0+):**
+Configure presence sensors once in Settings → Global Presence Sensors, then toggle per area:
+
 ```yaml
-# Add presence sensor
+# Configure global presence sensors (Settings page)
+# Add person entities, device trackers, or motion sensors
+# Examples: person.john, device_tracker.phone, binary_sensor.home_motion
+
+# Each area can then choose:
+# - Use Global Presence Sensors (toggle ON)
+# - Use Area-Specific Sensors (toggle OFF)
+```
+
+**Per-Area Configuration:**
+```yaml
+# Add area-specific presence sensor
 service: smart_heating.add_presence_sensor
 data:
   area_id: "home_office"
@@ -610,26 +629,45 @@ service: smart_heating.remove_presence_sensor
 data:
   area_id: "home_office"
   entity_id: "binary_sensor.office_motion"
+
+# Toggle between global and area-specific (v0.5.0+)
+# Use the frontend toggle in Area Detail → Presence Configuration
+# Or via API:
+POST /api/smart_heating/areas/home_office/presence_config
+{"use_global": true}
 ```
 
-**Customization:**
-Per-area setting (in `area_manager.py`):
-- `presence_temp_boost`: Temperature increase in °C (default: 2.0)
-
 **Supported Sensor Types:**
+- Person entities (`person.john`, `person.jane`)
+- Device trackers (`device_tracker.phone_john`)
 - Motion sensors (`binary_sensor` with `device_class: motion`)
 - Occupancy sensors (`device_class: occupancy`)
 - Presence sensors (`device_class: presence`)
-- Person detection sensors
+
+**Benefits:**
+- ✅ Centralized configuration with global sensors
+- ✅ Per-area override when needed
+- ✅ Clean preset mode switching (Away ↔ Home)
+- ✅ Works with your configured preset temperatures
+- ✅ Energy savings when nobody home
 
 **REST API:**
 ```bash
-# Add sensor
+# Configure global presence sensors (v0.5.0+)
+GET /api/smart_heating/global_presence
+POST /api/smart_heating/global_presence
+{"sensors": [{"entity_id": "person.john"}, {"entity_id": "person.jane"}]}
+
+# Add area-specific sensor
 POST /api/smart_heating/areas/home_office/presence_sensors
 {"entity_id": "binary_sensor.office_motion"}
 
-# Remove sensor
+# Remove area-specific sensor
 DELETE /api/smart_heating/areas/home_office/presence_sensors/binary_sensor.office_motion
+
+# Toggle global/area presence (v0.5.0+)
+POST /api/smart_heating/areas/home_office/presence_config
+{"use_global": true}
 ```
 
 ### Frost Protection
@@ -1066,10 +1104,18 @@ Add a temperature schedule to an area.
 - `day` (required): Day name (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
 - `start_time` (required): Start time in HH:MM format (24-hour)
 - `end_time` (required): End time in HH:MM format (24-hour)
-- `temperature` (required): Target temperature in °C
+- `temperature` (optional): Target temperature in °C (use either temperature OR preset_mode)
+- `preset_mode` (optional): Preset mode to activate (away, eco, comfort, home, sleep, activity) (v0.5.0+)
 
-**Example:**
+**Features:**
+- **Temperature-Based**: Set fixed temperature for the schedule period
+- **Preset-Based**: Activate a preset mode (uses global or custom preset temperature) (v0.5.0+)
+- **Cross-Day Support**: End time before start time indicates schedule spans midnight (v0.5.0+)
+  - Example: Saturday 22:00 to Sunday 07:00 works correctly
+
+**Examples:**
 ```yaml
+# Temperature-based schedule
 service: smart_heating.add_schedule
 data:
   area_id: "living_room"
@@ -1077,6 +1123,15 @@ data:
   start_time: "07:00"
   end_time: "22:00"
   temperature: 21.5
+
+# Preset-based schedule (v0.5.0+)
+service: smart_heating.add_schedule
+data:
+  area_id: "bedroom"
+  day: "Saturday"
+  start_time: "22:00"
+  end_time: "07:00"
+  preset_mode: "sleep"
 ```
 
 #### `smart_heating.remove_schedule`
