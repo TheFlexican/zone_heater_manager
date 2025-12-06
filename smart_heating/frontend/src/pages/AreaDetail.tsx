@@ -62,7 +62,8 @@ import {
   removeDeviceFromZone,
   getEntityState,
   getGlobalPresets,
-  setAreaPresetConfig
+  setAreaPresetConfig,
+  setAreaPresenceConfig
 } from '../api'
 import ScheduleEditor from '../components/ScheduleEditor'
 import HistoryChart from '../components/HistoryChart'
@@ -687,6 +688,56 @@ const ZoneDetail = () => {
               Add Window Sensor
             </Button>
           </>
+        )
+      },
+      {
+        id: 'presence-config',
+        title: 'Presence Configuration',
+        description: 'Choose between global or area-specific presence sensors',
+        icon: <SensorOccupiedIcon />,
+        defaultExpanded: false,
+        content: (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={area.use_global_presence ?? false}
+                  onChange={async (e) => {
+                    e.stopPropagation()
+                    const newValue = e.target.checked
+                    console.log('Setting use_global_presence to:', newValue)
+                    try {
+                      await setAreaPresenceConfig(area.id, newValue)
+                      console.log('Successfully updated presence config')
+                      // Force reload to get updated data
+                      await loadData()
+                    } catch (error) {
+                      console.error('Failed to update presence config:', error)
+                      alert(`Failed to update presence config: ${error}`)
+                    }
+                  }}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body1">
+                    {area.use_global_presence ? 'Use Global Presence Sensors' : 'Use Area-Specific Sensors'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {area.use_global_presence 
+                      ? 'Using global presence sensors configured in Settings'
+                      : 'Using area-specific presence sensors configured below'
+                    }
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <Alert severity="info">
+              Toggle to choose between global presence sensors (shared across all areas) or area-specific sensors.
+              Global presence sensors can be configured in <strong>Settings → Global Settings</strong>.
+            </Alert>
+          </Box>
         )
       },
       {

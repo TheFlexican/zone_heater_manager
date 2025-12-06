@@ -8,10 +8,17 @@ import {
   Alert,
   CircularProgress,
   Stack,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import { useNavigate } from 'react-router-dom'
-import { getGlobalPresets, setGlobalPresets } from '../api'
+import { getGlobalPresets, setGlobalPresets, getGlobalPresence, setGlobalPresence } from '../api'
+import { PresenceSensorConfig, WindowSensorConfig } from '../types'
+import SensorConfigDialog from '../components/SensorConfigDialog'
 
 interface GlobalPresetsData {
   away_temp: number
@@ -48,9 +55,12 @@ export default function GlobalSettings() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveTimeout, setSaveTimeout] = useState<number | null>(null)
+  const [presenceSensors, setPresenceSensors] = useState<PresenceSensorConfig[]>([])
+  const [sensorDialogOpen, setSensorDialogOpen] = useState(false)
 
   useEffect(() => {
     loadPresets()
+    loadPresenceSensors()
   }, [])
 
   const loadPresets = async () => {
@@ -64,6 +74,15 @@ export default function GlobalSettings() {
       console.error('Error loading global presets:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadPresenceSensors = async () => {
+    try {
+      const data = await getGlobalPresence()
+      setPresenceSensors(data.sensors || [])
+    } catch (err) {
+      console.error('Error loading global presence sensors:', err)
     }
   }
 
@@ -97,6 +116,29 @@ export default function GlobalSettings() {
     }, 500)
 
     setSaveTimeout(timeout)
+  }
+
+  const handleAddPresenceSensor = async (config: WindowSensorConfig | PresenceSensorConfig) => {
+    try {
+      const newSensors = [...presenceSensors, config as PresenceSensorConfig]
+      await setGlobalPresence(newSensors)
+      await loadPresenceSensors()
+      setSensorDialogOpen(false)
+    } catch (err) {
+      console.error('Error adding presence sensor:', err)
+      setError('Failed to add presence sensor')
+    }
+  }
+
+  const handleRemovePresenceSensor = async (entityId: string) => {
+    try {
+      const newSensors = presenceSensors.filter(s => s.entity_id !== entityId)
+      await setGlobalPresence(newSensors)
+      await loadPresenceSensors()
+    } catch (err) {
+      console.error('Error removing presence sensor:', err)
+      setError('Failed to remove presence sensor')
+    }
   }
 
   if (loading) {
@@ -199,7 +241,65 @@ export default function GlobalSettings() {
             💡 Tip: To customize temperatures for a specific area, go to that area's settings and toggle off "Use global preset" for individual preset modes.
           </Typography>
         </Paper>
+
+        {/* Global Presence Sensors */}
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            Global Presence Sensors
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Configure presence sensors that can be used across all areas. Areas can choose to use these global sensors or configure their own.
+          </Typography>
+
+          {presenceSensors.length > 0 ? (
+            <List dense>
+              {presenceSensors.map((sensor) => (
+                <ListItem
+                  key={sensor.entity_id}
+                  secondaryAction={
+                    <IconButton
+                      edge="end"
+                      onClick={() => handleRemovePresenceSensor(sensor.entity_id)}
+                    >
+                      <RemoveCircleOutlineIcon />
+                    </IconButton>
+                  }
+                >
+                  <ListItemText
+                    primary={sensor.entity_id}
+                    secondary="Switches heating to 'away' when nobody is home"
+                  />
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              No global presence sensors configured. Add sensors that will be available to all areas.
+            </Alert>
+          )}
+
+          <Button
+            variant="outlined"
+            fullWidth
+            onClick={() => setSensorDialogOpen(true)}
+            sx={{ mt: 2 }}
+          >
+            Add Presence Sensor
+          </Button>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 3, fontStyle: 'italic' }}>
+            💡 Tip: Areas can enable "Use global presence" in their settings to use these sensors instead of configuring their own.
+          </Typography>
+        </Paper>
       </Box>
+
+      {/* Sensor Dialog */}
+      <SensorConfigDialog
+        open={sensorDialogOpen}
+        onClose={() => setSensorDialogOpen(false)}
+        onAdd={handleAddPresenceSensor}
+        sensorType="presence"
+      />
     </Box>
   )
 }

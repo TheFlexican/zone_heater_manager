@@ -69,6 +69,8 @@ class SmartHeatingAPIView(HomeAssistantView):
                 return await self.get_learning_stats(request, area_id)
             elif endpoint == "global_presets":
                 return await self.get_global_presets(request)
+            elif endpoint == "global_presence":
+                return await self.get_global_presence(request)
             elif endpoint.startswith("areas/"):
                 area_id = endpoint.split("/")[1]
                 return await self.get_area(request, area_id)
@@ -152,6 +154,8 @@ class SmartHeatingAPIView(HomeAssistantView):
                 return await self.set_history_config(request, data)
             elif endpoint == "global_presets":
                 return await self.set_global_presets(request, data)
+            elif endpoint == "global_presence":
+                return await self.set_global_presence(request, data)
             elif endpoint.startswith("areas/") and endpoint.endswith("/preset_config"):
                 area_id = endpoint.split("/")[1]
                 return await self.set_area_preset_config(request, area_id, data)
@@ -318,6 +322,7 @@ class SmartHeatingAPIView(HomeAssistantView):
                     # Sensors
                     "window_sensors": stored_area.window_sensors,
                     "presence_sensors": stored_area.presence_sensors,
+                    "use_global_presence": stored_area.use_global_presence,
                 })
             else:
                 # Default data for HA area without stored settings
@@ -393,6 +398,13 @@ class SmartHeatingAPIView(HomeAssistantView):
             "home_temp": area.home_temp,
             "sleep_temp": area.sleep_temp,
             "activity_temp": area.activity_temp,
+            # Global preset flags
+            "use_global_away": area.use_global_away,
+            "use_global_eco": area.use_global_eco,
+            "use_global_comfort": area.use_global_comfort,
+            "use_global_home": area.use_global_home,
+            "use_global_sleep": area.use_global_sleep,
+            "use_global_activity": area.use_global_activity,
             # Boost mode
             "boost_mode_active": area.boost_mode_active,
             "boost_temp": area.boost_temp,
@@ -404,6 +416,7 @@ class SmartHeatingAPIView(HomeAssistantView):
             # Sensors
             "window_sensors": area.window_sensors,
             "presence_sensors": area.presence_sensors,
+            "use_global_presence": area.use_global_presence,
         }
         
         return web.json_response(area_data)
@@ -1323,6 +1336,42 @@ class SmartHeatingAPIView(HomeAssistantView):
         
         return web.json_response({"success": True})
 
+    async def get_global_presence(self, request: web.Request) -> web.Response:
+        """Get global presence sensors.
+        
+        Args:
+            request: Request object
+            
+        Returns:
+            JSON response with global presence sensors
+        """
+        return web.json_response({
+            "sensors": self.area_manager.global_presence_sensors
+        })
+
+    async def set_global_presence(self, request: web.Request, data: dict) -> web.Response:
+        """Set global presence sensors.
+        
+        Args:
+            request: Request object
+            data: Dictionary with sensors list
+            
+        Returns:
+            JSON response
+        """
+        _LOGGER.warning("🌍 API: SET GLOBAL PRESENCE: %s", data)
+        
+        if "sensors" in data:
+            self.area_manager.global_presence_sensors = data["sensors"]
+            _LOGGER.warning("  Global presence sensors updated: %d sensors", len(self.area_manager.global_presence_sensors))
+        
+        # Save to storage
+        await self.area_manager.async_save()
+        
+        _LOGGER.warning("✓ Global presence saved")
+        
+        return web.json_response({"success": True})
+
     async def set_area_preset_config(
         self, request: web.Request, area_id: str, data: dict
     ) -> web.Response:
@@ -1358,6 +1407,8 @@ class SmartHeatingAPIView(HomeAssistantView):
             area.use_global_sleep = bool(data["use_global_sleep"])
         if "use_global_activity" in data:
             area.use_global_activity = bool(data["use_global_activity"])
+        if "use_global_presence" in data:
+            area.use_global_presence = bool(data["use_global_presence"])
         
         # Save to storage
         await self.area_manager.async_save()

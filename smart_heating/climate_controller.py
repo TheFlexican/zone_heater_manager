@@ -213,9 +213,18 @@ class ClimateController:
                         _LOGGER.info("All windows closed in area %s - normal heating resumed", area_id)
             
             # Update presence sensor states
-            if area.presence_sensors:
+            # Use global presence sensors if enabled, otherwise use area-specific
+            presence_sensors = []
+            if area.use_global_presence:
+                # Use global presence sensors
+                presence_sensors = self.area_manager.global_presence_sensors
+            else:
+                # Use area-specific sensors
+                presence_sensors = area.presence_sensors
+            
+            if presence_sensors:
                 any_presence_detected = False
-                for sensor in area.presence_sensors:
+                for sensor in presence_sensors:
                     sensor_id = sensor.get("entity_id") if isinstance(sensor, dict) else sensor
                     state = self.hass.states.get(sensor_id)
                     if state:

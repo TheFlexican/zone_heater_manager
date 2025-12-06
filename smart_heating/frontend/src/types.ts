@@ -91,6 +91,7 @@ export interface Zone {
   // Presence sensor settings
   presence_sensors?: PresenceSensorConfig[]
   presence_detected?: boolean
+  use_global_presence?: boolean  // Use global presence sensors instead of area-specific
 }
 
 // Window sensor configuration
@@ -130,6 +131,11 @@ export interface GlobalPresets {
   home_temp: number
   sleep_temp: number
   activity_temp: number
+}
+
+// Global presence sensors
+export interface GlobalPresence {
+  sensors: PresenceSensorConfig[]
 }
 
 export interface LearningStats {

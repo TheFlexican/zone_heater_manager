@@ -303,3 +303,21 @@ export const setManualOverride = async (
   await axios.post(`${API_BASE}/areas/${areaId}/manual_override`, { enabled })
 }
 
+// Global presence sensor management
+export const getGlobalPresence = async (): Promise<{
+  sensors: PresenceSensorConfig[]
+}> => {
+  const response = await axios.get(`${API_BASE}/global_presence`)
+  return response.data
+}
+
+export const setGlobalPresence = async (sensors: PresenceSensorConfig[]): Promise<void> => {
+  await axios.post(`${API_BASE}/global_presence`, { sensors })
+}
+
+export const setAreaPresenceConfig = async (
+  areaId: string,
+  useGlobal: boolean
+): Promise<void> => {
+  await axios.post(`${API_BASE}/areas/${areaId}/preset_config`, { use_global_presence: useGlobal })
+}

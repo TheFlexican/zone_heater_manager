@@ -249,6 +249,7 @@ class Area:
         # Presence sensor settings (new config structure)
         self.presence_sensors: list[dict[str, Any]] = []  # List of presence sensor configs
         self.presence_detected: bool = False  # Cached state
+        self.use_global_presence: bool = False  # Use global presence sensors instead of area-specific
         
         # Manual override mode - when user manually adjusts thermostat outside the app
         self.manual_override: bool = False  # True when thermostat was manually adjusted
@@ -736,6 +737,7 @@ class Area:
             "window_sensors": self.window_sensors,
             # Presence sensors (new structure)
             "presence_sensors": self.presence_sensors,
+            "use_global_presence": self.use_global_presence,
         }
 
     @classmethod
@@ -831,6 +833,9 @@ class Area:
         else:
             area.presence_sensors = presence_sensors_data
         
+        # Global presence flag (default to False for backward compatibility)
+        area.use_global_presence = data.get("use_global_presence", False)
+        
         # Load schedules
         for schedule_data in data.get("schedules", []):
             schedule = Schedule.from_dict(schedule_data)
@@ -876,6 +881,9 @@ class AreaManager:
         self.global_sleep_temp: float = DEFAULT_SLEEP_TEMP
         self.global_activity_temp: float = DEFAULT_ACTIVITY_TEMP
         
+        # Global Presence Sensors
+        self.global_presence_sensors: list[dict] = []
+        
         _LOGGER.debug("AreaManager initialized")
 
     async def async_load(self) -> None:
@@ -901,6 +909,9 @@ class AreaManager:
             self.global_home_temp = data.get("global_home_temp", DEFAULT_HOME_TEMP)
             self.global_sleep_temp = data.get("global_sleep_temp", DEFAULT_SLEEP_TEMP)
             self.global_activity_temp = data.get("global_activity_temp", DEFAULT_ACTIVITY_TEMP)
+            
+            # Load global presence sensors
+            self.global_presence_sensors = data.get("global_presence_sensors", [])
             
             # Load areas
             if "areas" in data:
@@ -930,6 +941,7 @@ class AreaManager:
             "global_home_temp": self.global_home_temp,
             "global_sleep_temp": self.global_sleep_temp,
             "global_activity_temp": self.global_activity_temp,
+            "global_presence_sensors": self.global_presence_sensors,
             "areas": [area.to_dict() for area in self.areas.values()]
         }
         await self._store.async_save(data)
