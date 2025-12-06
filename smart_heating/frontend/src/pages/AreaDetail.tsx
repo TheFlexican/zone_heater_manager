@@ -1788,23 +1788,56 @@ const ZoneDetail = () => {
                 Development log showing all heating strategy decisions for this area.
               </Typography>
 
-              <Box sx={{ mb: 3 }}>
-                <FormControl size="small" sx={{ minWidth: 200 }}>
-                  <InputLabel>Filter by Type</InputLabel>
-                  <Select
-                    value={logFilter}
-                    label="Filter by Type"
-                    onChange={(e) => setLogFilter(e.target.value)}
-                  >
-                    <MenuItem value="all">All Events</MenuItem>
-                    <MenuItem value="temperature">Temperature</MenuItem>
-                    <MenuItem value="heating">Heating</MenuItem>
-                    <MenuItem value="schedule">Schedule</MenuItem>
-                    <MenuItem value="smart_boost">Smart Night Boost</MenuItem>
-                    <MenuItem value="sensor">Sensors</MenuItem>
-                    <MenuItem value="mode">Mode Changes</MenuItem>
-                  </Select>
-                </FormControl>
+              <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Chip
+                  label="All Events"
+                  onClick={() => setLogFilter('all')}
+                  color={logFilter === 'all' ? 'primary' : 'default'}
+                  variant={logFilter === 'all' ? 'filled' : 'outlined'}
+                  sx={{ cursor: 'pointer' }}
+                />
+                <Chip
+                  label="Temperature"
+                  onClick={() => setLogFilter('temperature')}
+                  color={logFilter === 'temperature' ? 'info' : 'default'}
+                  variant={logFilter === 'temperature' ? 'filled' : 'outlined'}
+                  sx={{ cursor: 'pointer' }}
+                />
+                <Chip
+                  label="Heating"
+                  onClick={() => setLogFilter('heating')}
+                  color={logFilter === 'heating' ? 'error' : 'default'}
+                  variant={logFilter === 'heating' ? 'filled' : 'outlined'}
+                  sx={{ cursor: 'pointer' }}
+                />
+                <Chip
+                  label="Schedule"
+                  onClick={() => setLogFilter('schedule')}
+                  color={logFilter === 'schedule' ? 'success' : 'default'}
+                  variant={logFilter === 'schedule' ? 'filled' : 'outlined'}
+                  sx={{ cursor: 'pointer' }}
+                />
+                <Chip
+                  label="Smart Boost"
+                  onClick={() => setLogFilter('smart_boost')}
+                  color={logFilter === 'smart_boost' ? 'secondary' : 'default'}
+                  variant={logFilter === 'smart_boost' ? 'filled' : 'outlined'}
+                  sx={{ cursor: 'pointer' }}
+                />
+                <Chip
+                  label="Sensors"
+                  onClick={() => setLogFilter('sensor')}
+                  color={logFilter === 'sensor' ? 'warning' : 'default'}
+                  variant={logFilter === 'sensor' ? 'filled' : 'outlined'}
+                  sx={{ cursor: 'pointer' }}
+                />
+                <Chip
+                  label="Mode"
+                  onClick={() => setLogFilter('mode')}
+                  color={logFilter === 'mode' ? 'primary' : 'default'}
+                  variant={logFilter === 'mode' ? 'filled' : 'outlined'}
+                  sx={{ cursor: 'pointer' }}
+                />
               </Box>
 
               {logsLoading ? (

@@ -41,7 +41,7 @@ test.describe('Area Logs Tab', () => {
     await expect(page.locator('text=Development log showing all heating strategy decisions')).toBeVisible();
   });
 
-  test('should display log filter dropdown', async ({ page }) => {
+  test('should display chip-based filter buttons', async ({ page }) => {
     // Navigate to an area and open Logs tab
     const areaCard = page.locator('text=Living Room').first();
     await areaCard.click();
@@ -51,12 +51,17 @@ test.describe('Area Logs Tab', () => {
     await logsTab.click();
     await page.waitForSelector('text=Heating Strategy Logs', { timeout: 5000 });
     
-    // Check if filter dropdown exists
-    const filterDropdown = page.locator('label:has-text("Filter by Type")');
-    await expect(filterDropdown).toBeVisible();
+    // Check if filter chips exist
+    await expect(page.locator('.MuiChip-root:has-text("All Events")')).toBeVisible();
+    await expect(page.locator('.MuiChip-root:has-text("Temperature")')).toBeVisible();
+    await expect(page.locator('.MuiChip-root:has-text("Heating")')).toBeVisible();
+    await expect(page.locator('.MuiChip-root:has-text("Schedule")')).toBeVisible();
+    await expect(page.locator('.MuiChip-root:has-text("Smart Boost")')).toBeVisible();
+    await expect(page.locator('.MuiChip-root:has-text("Sensors")')).toBeVisible();
+    await expect(page.locator('.MuiChip-root:has-text("Mode")')).toBeVisible();
   });
 
-  test('should filter logs by event type', async ({ page }) => {
+  test('should filter logs by clicking event type chips', async ({ page }) => {
     // Navigate to an area and open Logs tab
     const areaCard = page.locator('text=Living Room').first();
     await areaCard.click();
@@ -66,20 +71,32 @@ test.describe('Area Logs Tab', () => {
     await logsTab.click();
     await page.waitForSelector('text=Heating Strategy Logs', { timeout: 5000 });
     
-    // Click on filter dropdown using the Select component
-    const filterSelect = page.locator('[role="combobox"]').filter({ hasText: 'All Events' });
-    await filterSelect.click();
+    // Check initial state - "All Events" should be active (filled variant)
+    const allEventsChip = page.locator('.MuiChip-root:has-text("All Events")');
+    await expect(allEventsChip).toHaveClass(/MuiChip-filled/);
     
-    // Wait for menu to appear
-    await page.waitForSelector('[role="option"]:has-text("Temperature")', { timeout: 2000 });
+    // Click on "Temperature" filter chip
+    const temperatureChip = page.locator('.MuiChip-root:has-text("Temperature")').first();
+    await temperatureChip.click();
     
-    // Check if filter options exist
-    await expect(page.locator('[role="option"]:has-text("Temperature")')).toBeVisible();
-    await expect(page.locator('[role="option"]:has-text("Heating")')).toBeVisible();
-    await expect(page.locator('[role="option"]:has-text("Schedule")')).toBeVisible();
-    await expect(page.locator('[role="option"]:has-text("Smart Night Boost")')).toBeVisible();
-    await expect(page.locator('[role="option"]:has-text("Sensors")')).toBeVisible();
-    await expect(page.locator('[role="option"]:has-text("Mode Changes")')).toBeVisible();
+    // Wait a moment for filter to apply
+    await page.waitForTimeout(500);
+    
+    // Temperature chip should now be filled (active)
+    await expect(temperatureChip).toHaveClass(/MuiChip-filled/);
+    
+    // All Events chip should now be outlined (inactive)
+    await expect(allEventsChip).toHaveClass(/MuiChip-outlined/);
+    
+    // Click back to "All Events"
+    await allEventsChip.click();
+    await page.waitForTimeout(500);
+    
+    // All Events should be filled again
+    await expect(allEventsChip).toHaveClass(/MuiChip-filled/);
+    
+    // Temperature should be outlined again
+    await expect(temperatureChip).toHaveClass(/MuiChip-outlined/);
   });
 
   test('should have refresh button', async ({ page }) => {

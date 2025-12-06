@@ -66,9 +66,13 @@ A Home Assistant custom integration for managing multi-area heating systems with
   - Dedicated Logs tab in area details showing all heating strategy decisions
   - Color-coded event types: Temperature, Heating, Schedule, Smart Boost, Sensors, Mode Changes
   - Detailed JSON data for each log entry showing exact parameters
-  - Filterable by event type (all, temperature, heating, schedule, smart boost, sensors, mode)
-  - Real-time logging during development with 500-entry history per area
+  - **Chip-Based Filtering** - One-click event type filters with visual feedback (v0.5.6+)
+  - **File-Based Storage** - Persistent logs stored in separate `.jsonl` files per event type (v0.5.6+)
+    - Storage: `.storage/smart_heating/logs/{area_id}/{event_type}.jsonl`
+    - Automatic rotation at 1,000 entries per file
+    - Logs persist across Home Assistant restarts
   - Tracks: temperature changes, heating state changes, schedule activations, smart night boost predictions, sensor triggers, manual override mode
+  - **Enhanced Detail** - Temperature source tracking (preset/schedule/base), night boost calculations with values (v0.5.6+)
 - ⚙️ **Advanced Settings** - Hysteresis control, temperature limits, and fine-tuning
 - 🌐 **REST API** - Full API for programmatic control
 - 📡 **WebSocket support** - Real-time updates and state synchronization

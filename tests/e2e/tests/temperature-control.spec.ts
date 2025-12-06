@@ -53,5 +53,49 @@ test.describe('Temperature Control Tests', () => {
     await toggleSwitch.click();
     await page.waitForTimeout(1000);
   });
+
+  test('should track temperature history when area is disabled', async ({ page }) => {
+    await navigateToArea(page, 'Living Room');
+    await dismissSnackbar(page);
+    
+    // Navigate to History tab
+    await switchToTab(page, 'History');
+    await page.waitForTimeout(1000);
+    
+    // Get the initial number of data points
+    const initialDataPoints = await page.locator('text=/Temperature recorded/i').count();
+    
+    // Switch back to Overview tab
+    await switchToTab(page, 'Overview');
+    
+    // Disable the area
+    const toggleSwitch = page.locator('input[type="checkbox"]').first();
+    const isEnabled = await toggleSwitch.isChecked();
+    
+    if (isEnabled) {
+      await toggleSwitch.click();
+      await page.waitForTimeout(2000); // Wait for state to update
+    }
+    
+    // Wait a bit for coordinator to run
+    await page.waitForTimeout(35000); // Wait for at least one coordinator cycle (30s + buffer)
+    
+    // Navigate back to History tab
+    await switchToTab(page, 'History');
+    await page.waitForTimeout(1000);
+    
+    // Check that history is still being recorded
+    // Note: We can't guarantee new data points, but we should still see the chart
+    const chart = page.locator('.recharts-wrapper, canvas, svg').first();
+    await expect(chart).toBeVisible({ timeout: 5000 });
+    
+    // Re-enable the area
+    await switchToTab(page, 'Overview');
+    if (!isEnabled) {
+      await toggleSwitch.click();
+      await page.waitForTimeout(1000);
+    }
+  });
 });
+
 

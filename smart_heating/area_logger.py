@@ -1,28 +1,49 @@
 """Area-specific logging for Smart Heating development."""
 import logging
+import json
 from datetime import datetime
 from typing import Any
-from collections import deque
 from pathlib import Path
 
 _LOGGER = logging.getLogger(__name__)
 
-# Maximum log entries per area (to prevent memory issues)
-MAX_LOG_ENTRIES = 500
+# Maximum log entries per file (rotated when exceeded)
+MAX_LOG_ENTRIES_PER_FILE = 1000
+
+# Valid event types
+EVENT_TYPES = ["temperature", "heating", "schedule", "smart_boost", "sensor", "mode"]
 
 
 class AreaLogger:
-    """Logger for tracking heating strategy decisions per area."""
+    """Logger for tracking heating strategy decisions per area.
     
-    def __init__(self, storage_path: str | None = None) -> None:
+    Logs are stored in separate files per event type for efficient filtering:
+    .storage/smart_heating/logs/{area_id}/{event_type}.jsonl
+    """
+    
+    def __init__(self, storage_path: str) -> None:
         """Initialize the area logger.
         
         Args:
-            storage_path: Optional path to store logs persistently
+            storage_path: Base path to store logs (e.g., .storage/smart_heating)
         """
-        self._logs: dict[str, deque] = {}
-        self._storage_path = storage_path
-        _LOGGER.info("Area logger initialized")
+        self._base_path = Path(storage_path) / "logs"
+        self._base_path.mkdir(parents=True, exist_ok=True)
+        _LOGGER.info("Area logger initialized at %s", self._base_path)
+    
+    def _get_log_file_path(self, area_id: str, event_type: str) -> Path:
+        """Get the log file path for an area and event type.
+        
+        Args:
+            area_id: Area identifier
+            event_type: Type of event
+            
+        Returns:
+            Path to the log file
+        """
+        area_path = self._base_path / area_id
+        area_path.mkdir(parents=True, exist_ok=True)
+        return area_path / f"{event_type}.jsonl"
     
     def log_event(
         self,
@@ -35,12 +56,13 @@ class AreaLogger:
         
         Args:
             area_id: Area identifier
-            event_type: Type of event (temperature, schedule, preset, boost, etc.)
+            event_type: Type of event (temperature, heating, schedule, smart_boost, sensor, mode)
             message: Human-readable message
             details: Additional event details
         """
-        if area_id not in self._logs:
-            self._logs[area_id] = deque(maxlen=MAX_LOG_ENTRIES)
+        if event_type not in EVENT_TYPES:
+            _LOGGER.warning("Unknown event type '%s', using 'mode'", event_type)
+            event_type = "mode"
         
         entry = {
             "timestamp": datetime.now().isoformat(),
@@ -49,16 +71,51 @@ class AreaLogger:
             "details": details or {}
         }
         
-        self._logs[area_id].append(entry)
+        # Append to the appropriate log file
+        log_file = self._get_log_file_path(area_id, event_type)
+        try:
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(entry) + '\n')
+            
+            # Check file size and rotate if needed
+            self._rotate_if_needed(log_file)
+            
+        except Exception as err:
+            _LOGGER.error("Failed to write log for area %s: %s", area_id, err)
         
         # Also log to standard logger for debugging
-        _LOGGER.info(
+        _LOGGER.debug(
             "[%s] %s: %s %s",
             area_id,
             event_type.upper(),
             message,
             f"({details})" if details else ""
         )
+    
+    def _rotate_if_needed(self, log_file: Path) -> None:
+        """Rotate log file if it exceeds the maximum entries.
+        
+        Args:
+            log_file: Path to the log file
+        """
+        try:
+            # Count lines in file
+            with open(log_file, 'r', encoding='utf-8') as f:
+                line_count = sum(1 for _ in f)
+            
+            if line_count > MAX_LOG_ENTRIES_PER_FILE:
+                # Keep only the last MAX_LOG_ENTRIES_PER_FILE entries
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                
+                # Write back only the newest entries
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.writelines(lines[-MAX_LOG_ENTRIES_PER_FILE:])
+                
+                _LOGGER.debug("Rotated log file %s", log_file)
+                
+        except Exception as err:
+            _LOGGER.error("Failed to rotate log file %s: %s", log_file, err)
     
     def get_logs(
         self,
@@ -71,22 +128,29 @@ class AreaLogger:
         Args:
             area_id: Area identifier
             limit: Maximum number of entries to return
-            event_type: Filter by event type
+            event_type: Filter by event type (or None for all types)
             
         Returns:
             List of log entries (newest first)
         """
-        if area_id not in self._logs:
-            return []
+        logs = []
         
-        logs = list(self._logs[area_id])
-        
-        # Filter by event type if specified
         if event_type:
-            logs = [log for log in logs if log["type"] == event_type]
+            # Read from specific event type file
+            log_file = self._get_log_file_path(area_id, event_type)
+            if log_file.exists():
+                logs = self._read_log_file(log_file)
+        else:
+            # Read from all event type files and merge
+            area_path = self._base_path / area_id
+            if area_path.exists():
+                for event_type_file in EVENT_TYPES:
+                    log_file = area_path / f"{event_type_file}.jsonl"
+                    if log_file.exists():
+                        logs.extend(self._read_log_file(log_file))
         
-        # Reverse to show newest first
-        logs.reverse()
+        # Sort by timestamp (newest first)
+        logs.sort(key=lambda x: x["timestamp"], reverse=True)
         
         # Apply limit
         if limit:
@@ -94,15 +158,49 @@ class AreaLogger:
         
         return logs
     
-    def clear_logs(self, area_id: str) -> None:
-        """Clear all logs for an area.
+    def _read_log_file(self, log_file: Path) -> list[dict[str, Any]]:
+        """Read all entries from a log file.
+        
+        Args:
+            log_file: Path to the log file
+            
+        Returns:
+            List of log entries
+        """
+        logs = []
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        logs.append(json.loads(line.strip()))
+                    except json.JSONDecodeError:
+                        continue
+        except Exception as err:
+            _LOGGER.error("Failed to read log file %s: %s", log_file, err)
+        
+        return logs
+    
+    def clear_logs(self, area_id: str, event_type: str | None = None) -> None:
+        """Clear logs for an area.
         
         Args:
             area_id: Area identifier
+            event_type: Clear specific event type (or None for all)
         """
-        if area_id in self._logs:
-            self._logs[area_id].clear()
-            _LOGGER.info("Cleared logs for area %s", area_id)
+        area_path = self._base_path / area_id
+        
+        if event_type:
+            # Clear specific event type
+            log_file = area_path / f"{event_type}.jsonl"
+            if log_file.exists():
+                log_file.unlink()
+                _LOGGER.info("Cleared %s logs for area %s", event_type, area_id)
+        else:
+            # Clear all event types
+            if area_path.exists():
+                for log_file in area_path.glob("*.jsonl"):
+                    log_file.unlink()
+                _LOGGER.info("Cleared all logs for area %s", area_id)
     
     def get_all_area_ids(self) -> list[str]:
         """Get all area IDs that have logs.
@@ -110,4 +208,22 @@ class AreaLogger:
         Returns:
             List of area IDs
         """
-        return list(self._logs.keys())
+        if not self._base_path.exists():
+            return []
+        
+        return [d.name for d in self._base_path.iterdir() if d.is_dir()]
+    
+    def get_event_types(self, area_id: str) -> list[str]:
+        """Get all event types that have logs for an area.
+        
+        Args:
+            area_id: Area identifier
+            
+        Returns:
+            List of event types
+        """
+        area_path = self._base_path / area_id
+        if not area_path.exists():
+            return []
+        
+        return [f.stem for f in area_path.glob("*.jsonl")]

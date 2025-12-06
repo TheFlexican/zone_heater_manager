@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.6] - 2025-12-06
+
+### 🚀 Performance Improvements - File-Based Logging
+
+**Efficient Log Storage**
+- **File-Based Architecture**: Replaced in-memory log storage with persistent file-based system
+  - Separate `.jsonl` files per event type for efficient filtering
+  - Storage location: `.storage/smart_heating/logs/{area_id}/{event_type}.jsonl`
+  - Automatic log rotation at 1,000 entries per file
+  - Logs persist across Home Assistant restarts
+  - Reduced memory footprint - logs no longer kept in RAM
+
+**Enhanced UI/UX**
+- **Chip-Based Filtering**: Replaced dropdown with clickable filter chips
+  - Color-coded chips for each event type (Temperature, Heating, Schedule, etc.)
+  - Visual feedback: filled variant when active, outlined when inactive
+  - One-click filtering for better usability
+  - Matches event type badge colors for consistency
+
+**Event Type Files**
+- `temperature.jsonl` - Target temperature calculations and changes
+- `heating.jsonl` - Heating state transitions with context
+- `schedule.jsonl` - Schedule activation events
+- `smart_boost.jsonl` - Smart night boost predictions and starts
+- `sensor.jsonl` - Window and presence sensor state changes
+- `mode.jsonl` - Manual override mode entries and exits
+
+**Developer Benefits**
+- Faster log queries with direct file reads
+- Better scalability for long-running systems
+- Easier debugging with persistent event history
+- Clean separation of concerns by event type
+
+### 📝 Enhanced Logging Detail
+
+**Temperature Calculation Visibility**
+- Added source tracking for temperature changes
+  - Shows whether temperature comes from preset, schedule, or base target
+  - Logs night boost calculations with before/after values
+  - Includes current time and period checks for debugging
+
+**Night Boost Transparency**
+- Detailed logging when night boost applies
+  - Shows base target temperature
+  - Shows boost offset being added
+  - Shows effective target temperature after boost
+  - Includes current time and night period validation
+
+## [0.5.5] - 2025-12-06
+
+### 🐛 Fixed - Temperature Tracking
+
+**Disabled Areas Now Track Temperature**
+- Fixed issue where disabled areas stopped recording temperature history
+  - Moved history recording to start of area loop (before enabled check)
+  - All areas now maintain continuous temperature history regardless of state
+  - Critical for reviewing heating patterns when re-enabling areas
+
+**UI Cleanup**
+- Removed redundant "Device Status" section from area Overview tab
+  - Information already available in dedicated Devices tab
+  - Cleaner, less cluttered Overview presentation
+
 ## [0.5.4] - 2025-12-06
 
 ### ✨ New Features - Development Logging System
