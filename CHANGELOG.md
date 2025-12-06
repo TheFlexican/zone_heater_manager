@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-12-06
+
+### 📚 Documentation
+- **Complete Documentation Update**: Updated all documentation for v0.5.0 features
+  - CHANGELOG.md: Added comprehensive v0.5.0 release notes
+  - README.md: Documented schedule presets, cross-day schedules, and global presence
+  - API examples updated for new endpoints and service calls
+  - Feature descriptions aligned with actual implementation
+
+### 🔧 Fixed
+- Documentation was missing for v0.5.0 release features
+- Copilot instructions updated with RULE #4: Update documentation before releases
+
 ## [0.5.0] - 2025-12-06
 
 ### ✨ Added - Schedule Presets, Cross-Day Schedules & Global Presence Sensors

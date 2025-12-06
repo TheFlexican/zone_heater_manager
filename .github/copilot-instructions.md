@@ -22,6 +22,13 @@ Home Assistant integration for zone-based heating control with learning capabili
 - After implementing features: Deploy → Let user test → Wait for approval → THEN commit/tag/push
 - Workflow: Code → Deploy → Test → Approve → Git operations
 
+**RULE #4: Update Documentation Before Releases**
+- **ALWAYS** update CHANGELOG.md and README.md BEFORE creating releases
+- CHANGELOG.md must include new version section with all changes
+- README.md must document new features in appropriate sections
+- Update API documentation if endpoints changed
+- Workflow: Code → Test → Update Docs → Commit → Tag Release
+
 ## Key Directories
 ```
 smart_heating/          # Main integration (backend .py files + frontend/)
