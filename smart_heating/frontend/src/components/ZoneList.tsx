@@ -30,7 +30,9 @@ const ZoneList = ({ areas, loading, onUpdate, showHidden, onToggleShowHidden }: 
   }
 
   const hiddenCount = areas.filter(a => a.hidden).length
-  const visibleAreas = areas.filter(area => showHidden || !area.hidden)
+  const visibleAreas = areas
+    .filter(area => showHidden || !area.hidden)
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
     <Box>
